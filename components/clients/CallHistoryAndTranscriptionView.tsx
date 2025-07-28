@@ -5,21 +5,63 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PhoneCall } from 'lucide-react';
 import { PhoneCallList, PhoneCallTranscription } from '@/components/clients/PhoneCallHistory';
-import { IPhoneCallConversation, mockPhoneCallConversations } from '@/modules/clients/mock/phoneCallMockData';
-import { useEffect } from 'react'; // Import useEffect
+import { IPhoneCallConversation } from '@/modules/clients/mock/phoneCallMockData'; // Keep interface import
+import { useEffect, useMemo } from 'react'; // Import useEffect and useMemo
+import { IFirebaseTimestamp } from '@/modules/clients/types/clients'; // Import IFirebaseTimestamp
 
 interface CallHistoryAndTranscriptionViewProps {
   clientId: string;
+  filterDays: number | null; // Add filterDays prop
 }
 
-export const CallHistoryAndTranscriptionView = ({ clientId }: CallHistoryAndTranscriptionViewProps) => {
-  const conversations = mockPhoneCallConversations.filter(conv => conv.clientId === clientId);
+export const CallHistoryAndTranscriptionView = ({ clientId, filterDays }: CallHistoryAndTranscriptionViewProps) => {
+  const [allConversations, setAllConversations] = useState<IPhoneCallConversation[]>([]); // State to hold fetched data
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [selectedCallAction, setSelectedCallAction] = useState('');
 
   useEffect(() => {
+    // Placeholder for fetching real data
+    const fetchCallHistory = async () => {
+      try {
+        // const response = await fetch(`/api/clients/${clientId}/call-history`);
+        // const data = await response.json();
+        // setAllConversations(data);
+
+        // For now, simulate fetching with mock data (remove this in production)
+        const { mockPhoneCallConversations } = await import('@/modules/clients/mock/phoneCallMockData');
+        setAllConversations(mockPhoneCallConversations.filter(conv => conv.clientId === clientId));
+      } catch (error) {
+        console.error('Error fetching call history:', error);
+        setAllConversations([]); // Set to empty on error
+      }
+    };
+
+    fetchCallHistory();
+  }, [clientId]); // Re-fetch when clientId changes
+
+  const conversations = useMemo(() => {
+    const now = new Date();
+    return allConversations.filter(conv => {
+      // Assuming the last turn's timestamp is the conversation's latest timestamp
+      const lastTurnTimestamp = conv.turns[conv.turns.length - 1]?.timestamp;
+      if (!lastTurnTimestamp) return false;
+
+      // Convert string timestamp to Date object
+      const conversationDate = new Date(lastTurnTimestamp);
+
+      if (filterDays === null) {
+        return true; // Show all history
+      } else {
+        return now.getTime() - conversationDate.getTime() < filterDays * 24 * 60 * 60 * 1000;
+      }
+    });
+  }, [allConversations, filterDays]);
+
+  useEffect(() => {
     if (conversations.length > 0 && !selectedConversationId) {
       setSelectedConversationId(conversations[0].conversationId);
+    } else if (conversations.length === 0 && selectedConversationId) {
+      setSelectedConversationId(null); // Clear selection if no conversations match filter
     }
   }, [conversations, selectedConversationId]);
 
@@ -45,6 +87,7 @@ export const CallHistoryAndTranscriptionView = ({ clientId }: CallHistoryAndTran
             clientId={clientId}
             onSelectConversation={setSelectedConversationId}
             selectedConversationId={selectedConversationId}
+            conversations={conversations} // Pass filtered conversations
           />
         </div>
 

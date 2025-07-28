@@ -1,51 +1,26 @@
 'use client';
 
-import { IWhatsAppRecord, IFirebaseTimestamp } from '@/modules/clients/types/clients'; // Import IFirebaseTimestamp
-// import { mockWhatsAppRecords } from '@/modules/clients/mock/clientsMockData'; // Removed mock import
+import { IEmailRecord, mockEmailRecords } from '@/modules/clients/mock/emailMockData';
 import { safeFormatDate } from '@/utils/dateFormat';
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { useState, useMemo, useEffect } from 'react'; // Import useMemo, useEffect
+import { useState, useMemo } from 'react';
 import { ThumbsUp, ThumbsDown, Copy, Share2, RefreshCcw } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-interface WhatsAppHistoryProps {
+interface EmailHistoryProps {
   clientId: string;
   filterDays: number | null; // Add filterDays prop
 }
 
-export const WhatsAppHistory = ({ clientId, filterDays }: WhatsAppHistoryProps) => {
+export const EmailHistory = ({ clientId, filterDays }: EmailHistoryProps) => {
   const [selectedAction, setSelectedAction] = useState('');
-  const [whatsappRecords, setWhatsappRecords] = useState<IWhatsAppRecord[]>([]); // State to hold fetched data
-
-  useEffect(() => {
-    // Placeholder for fetching real data
-    const fetchWhatsAppHistory = async () => {
-      try {
-        // In a real application, you would fetch data from your API
-        // const response = await fetch(`/api/clients/${clientId}/whatsapp-history?filterDays=${filterDays}`);
-        // const data = await response.json();
-        // setWhatsappRecords(data);
-
-        // For now, simulate fetching with mock data (remove this in production)
-        const { mockWhatsAppRecords } = await import('@/modules/clients/mock/clientsMockData');
-        setWhatsappRecords(mockWhatsAppRecords);
-
-      } catch (error) {
-        console.error('Error fetching WhatsApp history:', error);
-        setWhatsappRecords([]); // Set to empty on error
-      }
-    };
-
-    fetchWhatsAppHistory();
-  }, [clientId]); // Re-fetch when clientId changes
 
   const filteredRecords = useMemo(() => {
     const now = new Date();
-    return whatsappRecords.filter(record => {
-      // Ensure timestamp is correctly handled, assuming it's IFirebaseTimestamp
-      const recordDate = new Date((record.timestamp as IFirebaseTimestamp)._seconds * 1000);
+    return mockEmailRecords.filter(record => {
+      const recordDate = new Date(record.timestamp._seconds * 1000);
       const isForClient = record.clientId === clientId;
 
       if (!isForClient) return false;
@@ -56,13 +31,12 @@ export const WhatsAppHistory = ({ clientId, filterDays }: WhatsAppHistoryProps) 
         return now.getTime() - recordDate.getTime() < filterDays * 24 * 60 * 60 * 1000;
       }
     });
-  }, [clientId, filterDays, whatsappRecords]); // Depend on whatsappRecords
+  }, [clientId, filterDays]); // Depend on filterDays
 
   const handleExecuteAction = () => {
     if (selectedAction) {
-      // In a real application, you would send this action to the agentmcp
-      console.log('Executing action:', selectedAction);
-      setSelectedAction(''); // Clear selection after execution
+      console.log('Executing email action:', selectedAction);
+      setSelectedAction('');
     }
   };
 
@@ -71,9 +45,9 @@ export const WhatsAppHistory = ({ clientId, filterDays }: WhatsAppHistoryProps) 
       <div className="flex flex-col h-[calc(100vh-200px)] bg-gray-50 rounded-lg overflow-hidden">
         {/* Filter buttons are now handled by the parent component */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {filteredRecords.length === 0 && <p className="text-center text-muted-foreground mt-8">No hay registros de WhatsApp para este cliente.</p>}
+          {filteredRecords.length === 0 && <p className="text-center text-muted-foreground mt-8">No hay registros de Email para este cliente.</p>}
           {filteredRecords.map(record => {
-            const isClient = record.messageDirection === 'inbound';
+            const isClient = record.direction === 'inbound';
             const senderName = isClient ? 'Cliente' : 'Agente';
             const avatarFallback = isClient ? 'CL' : 'AG';
 
@@ -100,14 +74,15 @@ export const WhatsAppHistory = ({ clientId, filterDays }: WhatsAppHistoryProps) 
                         {safeFormatDate(record.timestamp)}
                       </p>
                     </div>
-                    <p className="text-sm">{record.messageContent}</p>
-                    {record.botTranscription && (
+                    <p className="text-sm font-bold mb-1">Asunto: {record.subject}</p>
+                    <p className="text-sm whitespace-pre-wrap">{record.body}</p>
+                    {record.agentResponse && (
                       <div className={`mt-3 p-2 rounded-md ${isClient ? 'bg-gray-100' : 'bg-blue-700'}`}>
                         <p className={`text-xs font-semibold mb-1 ${isClient ? 'text-gray-700' : 'text-blue-100'}`}>
-                          Transcripción del Bot
+                          Respuesta del Agente/Bot
                         </p>
                         <div className="space-y-1">
-                          {record.botTranscription.map((entry, index) => (
+                          {record.agentResponse.map((entry, index) => (
                             <div key={index} className={`text-xs ${isClient ? (entry.role === 'bot' ? 'text-blue-600' : 'text-gray-800') : (entry.role === 'bot' ? 'text-blue-200' : 'text-white')}`}>
                               <span className="font-bold">{entry.role}: </span>
                               <span>{entry.content}</span>
@@ -186,11 +161,10 @@ export const WhatsAppHistory = ({ clientId, filterDays }: WhatsAppHistoryProps) 
               <SelectValue placeholder="Selecciona una acción o misión..." />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="call_overdue_payment">Hacer llamado a pago atrasado</SelectItem>
-              <SelectItem value="send_payment_reminder">Enviar recordatorio de pago</SelectItem>
-              <SelectItem value="request_document">Solicitar documento</SelectItem>
-              <SelectItem value="schedule_follow_up">Programar seguimiento</SelectItem>
-              <SelectItem value="escalate_case">Escalar caso</SelectItem>
+              <SelectItem value="send_payment_reminder_email">Enviar recordatorio de pago por email</SelectItem>
+              <SelectItem value="request_document_email">Solicitar documento por email</SelectItem>
+              <SelectItem value="schedule_follow_up_email">Programar seguimiento por email</SelectItem>
+              <SelectItem value="escalate_case_email">Escalar caso por email</SelectItem>
             </SelectContent>
           </Select>
           <Button onClick={handleExecuteAction} disabled={!selectedAction}>Ejecutar Acción</Button>

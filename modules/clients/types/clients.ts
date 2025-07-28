@@ -6,7 +6,7 @@
  */
 
 // For Firebase Timestamps like { "_seconds": 1705276800, "_nanoseconds": 0 }
-interface IFirebaseTimestamp {
+export interface IFirebaseTimestamp {
   _seconds: number;
   _nanoseconds: number;
 }
@@ -63,8 +63,6 @@ export const CLIENT_FIELD_CONFIG: IClientFieldConfig = {
 
 // --- Client Model ---
 export interface IClient {
-  id: string; // Unique system identifier
-  id: string; // Unique system identifier
   id: string; // Unique system identifier
   // REQUIRED FIELDS - Critical for operation
   name: string;

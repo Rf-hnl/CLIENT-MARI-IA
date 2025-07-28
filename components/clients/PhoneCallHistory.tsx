@@ -6,14 +6,17 @@ import { safeFormatDate } from '@/utils/dateFormat';
 import { PhoneCall, Mic, RefreshCcw, ArrowLeft } from 'lucide-react';
 import { IPhoneCallConversation, mockPhoneCallConversations } from '@/modules/clients/mock/phoneCallMockData';
 
+import { useMemo } from 'react'; // Import useMemo
+
 interface PhoneCallListProps {
   clientId: string;
   onSelectConversation: (conversationId: string) => void;
   selectedConversationId: string | null;
+  conversations: IPhoneCallConversation[]; // Add conversations prop
 }
 
-export const PhoneCallList = ({ clientId, onSelectConversation, selectedConversationId }: PhoneCallListProps) => {
-  const conversations = mockPhoneCallConversations.filter(conv => conv.clientId === clientId);
+export const PhoneCallList = ({ clientId, onSelectConversation, selectedConversationId, conversations }: PhoneCallListProps) => {
+  // conversations are now passed from parent, no need to filter here
 
   return (
     <div className="flex flex-col h-full bg-gray-50 rounded-lg overflow-hidden">

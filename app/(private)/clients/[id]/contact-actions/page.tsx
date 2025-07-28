@@ -19,13 +19,16 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"; // Import Collapsible components
 import { WhatsAppHistory } from '@/components/clients/WhatsAppHistory';
-import { CallHistoryAndTranscriptionView } from '@/components/clients/CallHistoryAndTranscriptionView'; // New import for the combined view
+import { CallHistoryAndTranscriptionView } from '@/components/clients/CallHistoryAndTranscriptionView';
+import { EmailHistory } from '@/components/clients/EmailHistory'; // New import for EmailHistory
 
 export default function ContactActionsPage() {
   const params = useParams();
   const router = useRouter();
   const [client, setClient] = useState<IClient | null>(null);
+  const [filterDays, setFilterDays] = useState<number | null>(null); // State for filter: null for all, number for days
 
   useEffect(() => {
     if (params.id) {
@@ -86,88 +89,75 @@ export default function ContactActionsPage() {
         <h1 className="text-2xl font-bold">Contactar a {client.name.toUpperCase()}</h1>
       </div>
       
-      <Tabs defaultValue="contact-options" className="flex flex-col flex-1">
+      {/* Client Info Summary with Collapsible */}
+      <div className="bg-muted/50 rounded-lg p-3 space-y-1 mb-4 text-sm">
+        <div className="flex items-center gap-2">
+          <span className="font-medium">Préstamo:</span>
+          <Badge variant="outline">{client.loan_letter}</Badge>
+          <span className="font-medium ml-4">Estado:</span>
+          <Badge variant={client.status === 'current' ? 'default' : 'outline'}
+                 className={client.status === 'overdue' ? 'bg-red-50 text-red-600 border-red-200' : ''}>
+            {client.status === 'current' ? 'Al día' : client.status === 'overdue' ? 'Vencido' : client.status}
+          </Badge>
+        </div>
+        
+        <Collapsible>
+          <CollapsibleTrigger asChild>
+            <Button variant="ghost" size="sm" className="w-full justify-start px-0 text-muted-foreground hover:text-foreground">
+              <span className="flex items-center gap-2">
+                {client.city && client.province && (
+                  <>
+                    <MapPin className="h-3 w-3" />
+                    <span>{client.city}, {client.province}</span>
+                  </>
+                )}
+                {client.best_contact_time && (
+                  <>
+                    {(client.city || client.province) ? <span className="mx-1">|</span> : null}
+                    <Clock className="h-3 w-3" />
+                    <span>{client.best_contact_time}</span>
+                  </>
+                )}
+                {client.preferred_contact_method && (
+                  <span className="ml-auto">
+                    {getPreferredMethodBadge()}
+                  </span>
+                )}
+              </span>
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="space-y-1 mt-2">
+            {/* Additional client details can go here if needed */}
+          </CollapsibleContent>
+        </Collapsible>
+      </div>
+      
+      <Tabs defaultValue="whatsapp-chat" className="flex flex-col flex-1"> {/* Default to whatsapp-chat */}
         <TabsList className="grid w-full grid-cols-3"> {/* Changed to 3 columns */}
-          <TabsTrigger value="contact-options">Opciones de Contacto</TabsTrigger>
           <TabsTrigger value="whatsapp-chat">WhatsApp Chat</TabsTrigger>
-          <TabsTrigger value="phone-call">Llamada Telefónica</TabsTrigger> {/* New tab trigger */}
+          <TabsTrigger value="phone-call">Llamada Telefónica</TabsTrigger>
+          <TabsTrigger value="email-history">Historial de Email</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="contact-options" className="flex-1 overflow-y-auto p-4">
-          <div className="space-y-4">
-            {/* Client Info Summary */}
-            <div className="bg-muted/50 rounded-lg p-3 space-y-2">
-              <div className="flex items-center gap-2 text-sm">
-                <span className="font-medium">Préstamo:</span>
-                <Badge variant="outline">{client.loan_letter}</Badge>
-              </div>
-              <div className="flex items-center gap-2 text-sm">
-                <span className="font-medium">Estado:</span>
-                <Badge variant={client.status === 'current' ? 'default' : 'outline'} 
-                       className={client.status === 'overdue' ? 'bg-red-50 text-red-600 border-red-200' : ''}>
-                  {client.status === 'current' ? 'Al día' : client.status === 'overdue' ? 'Vencido' : client.status}
-                </Badge>
-              </div>
-              {client.address && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <MapPin className="h-3 w-3" />
-                  {client.city}, {client.province}
-                </div>
-              )}
-              {client.best_contact_time && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Clock className="h-3 w-3" />
-                  {client.best_contact_time}
-                </div>
-              )}
-              {getPreferredMethodBadge()}
-            </div>
-
-            <Separator />
-
-            {/* Contact Actions */}
-            <div className="space-y-3">
-              <h4 className="font-medium text-sm">Opciones de Contacto</h4>
-              
-              {/* Email */}
-              <Button 
-                onClick={handleEmail}
-                className="w-full justify-start bg-blue-50 hover:bg-blue-100 text-blue-800 border-blue-200"
-                variant="outline"
-                disabled={!client.email}
-              >
-                <Mail className="h-4 w-4 mr-3" />
-                <div className="flex flex-col items-start">
-                  <span>Enviar Email</span>
-                  <span className="text-xs text-muted-foreground">
-                    {client.email || 'No disponible'}
-                  </span>
-                </div>
-                <ExternalLink className="h-3 w-3 ml-auto" />
-              </Button>
-            </div>
-
-            {/* Warnings for missing contact info */}
-            {(!client.email || !client.phone) && (
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-                <p className="text-xs text-amber-800 font-medium mb-1">
-                  ⚠️ Información de contacto incompleta
-                </p>
-                <ul className="text-xs text-amber-700 space-y-1">
-                  {!client.phone && <li>• Teléfono faltante</li>}
-                  {!client.email && <li>• Email faltante</li>}
-                </ul>
-              </div>
-            )}
-          </div>
-        </TabsContent>
-
         <TabsContent value="whatsapp-chat" className="flex-1 flex flex-col">
-          <WhatsAppHistory clientId={client.id} />
+          <div className="flex items-center gap-2 mb-4 flex-wrap"> {/* Added flex-wrap for responsiveness */}
+            <span className="font-medium text-sm">Filtrar por:</span>
+            <Button variant={filterDays === null ? "default" : "outline"} size="sm" onClick={() => setFilterDays(null)}>Todo el historial</Button>
+            <Button variant={filterDays === 1 ? "default" : "outline"} size="sm" onClick={() => setFilterDays(1)}>1 día</Button>
+            <Button variant={filterDays === 2 ? "default" : "outline"} size="sm" onClick={() => setFilterDays(2)}>2 días</Button>
+            <Button variant={filterDays === 3 ? "default" : "outline"} size="sm" onClick={() => setFilterDays(3)}>3 días</Button>
+            <Button variant={filterDays === 10 ? "default" : "outline"} size="sm" onClick={() => setFilterDays(10)}>10 días</Button>
+            <Button variant={filterDays === 15 ? "default" : "outline"} size="sm" onClick={() => setFilterDays(15)}>15 días</Button>
+          </div>
+          <WhatsAppHistory clientId={client.id} filterDays={filterDays} />
         </TabsContent>
 
-        <TabsContent value="phone-call" className="flex-1 flex flex-col"> {/* New tab content */}
-          <CallHistoryAndTranscriptionView clientId={client.id} />
+        <TabsContent value="phone-call" className="flex-1 flex flex-col">
+          <CallHistoryAndTranscriptionView clientId={client.id} filterDays={filterDays} />
+        </TabsContent>
+
+        <TabsContent value="email-history" className="flex-1 flex flex-col">
+          <EmailHistory clientId={client.id} filterDays={filterDays} />
         </TabsContent>
       </Tabs>
     </div>
