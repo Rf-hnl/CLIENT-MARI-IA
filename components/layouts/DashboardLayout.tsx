@@ -4,7 +4,7 @@ import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { AppSidebar } from '@/components/app-sidebar';
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
-import GlobalHeader from '@/components/layout/GlobalHeader';
+import SimpleGlobalHeader from '@/components/layout/SimpleGlobalHeader';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -30,8 +30,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset>
-        {/* Global Header integrado */}
-        <GlobalHeader />
+        {/* Simple Global Header */}
+        <SimpleGlobalHeader />
         
         {/* Contenido principal */}
         <div className="flex flex-1 flex-col gap-4 p-4">

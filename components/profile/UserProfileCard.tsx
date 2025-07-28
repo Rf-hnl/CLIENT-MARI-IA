@@ -66,8 +66,7 @@ import {
   sanitizeUserFormData,
   validateField 
 } from '@/lib/validations/userValidation';
-import { useCurrentSession, useOrganizations } from '@/hooks/useGlobalState';
-import OrganizationSwitcher from '@/components/organizations/OrganizationSwitcher';
+import { getCurrentUserData, getCurrentOrganization, getCurrentTenant } from '@/lib/auth/userState';
 
 interface UserProfileCardProps {
   user: User;
@@ -91,8 +90,24 @@ export default function UserProfileCard({ user, onProfileUpdate }: UserProfileCa
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Global state hooks
-  const { currentOrganization, currentTenant } = useCurrentSession();
-  const { availableOrganizations } = useOrganizations();
+  const [currentOrganization, setCurrentOrganization] = useState<any>(null);
+  const [currentTenant, setCurrentTenant] = useState<any>(null);
+  const [userData, setUserData] = useState<any>(null);
+
+  // Load user data when component mounts or user changes
+  useEffect(() => {
+    if (user) {
+      Promise.all([
+        getCurrentUserData(user),
+        getCurrentOrganization(user),
+        getCurrentTenant(user)
+      ]).then(([data, org, tenant]) => {
+        setUserData(data);
+        setCurrentOrganization(org);
+        setCurrentTenant(tenant);
+      });
+    }
+  }, [user]);
   
   const primaryProvider = getPrimaryProvider(userRecord);
   const providerInfo = getProviderInfo(primaryProvider);
@@ -1219,10 +1234,12 @@ export default function UserProfileCard({ user, onProfileUpdate }: UserProfileCa
                   </div>
                   
                   {/* Selector de Organización */}
-                  {availableOrganizations.length > 1 && (
+                  {userData?.availableOrganizations?.length > 1 && (
                     <div className="space-y-3">
                       <h5 className="font-medium text-sm">Cambiar Organización</h5>
-                      <OrganizationSwitcher className="w-full max-w-md" />
+                      <p className="text-sm text-muted-foreground">
+                        Organización actual: {currentOrganization?.name || 'No seleccionada'}
+                      </p>
                     </div>
                   )}
                 </div>

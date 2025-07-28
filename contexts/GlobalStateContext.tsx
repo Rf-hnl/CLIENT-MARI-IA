@@ -34,8 +34,8 @@ function globalStateReducer(state: GlobalState, action: GlobalStateAction): Glob
   switch (action.type) {
     case 'SET_USER': {
       const user = action.payload;
-      const currentOrgId = user.firestoreUser.currentOrganizationId;
-      const currentTenantId = user.firestoreUser.currentTenantId;
+      const currentOrgId = user.firestoreUser?.currentOrganizationId;
+      const currentTenantId = user.firestoreUser?.currentTenantId;
       
       // Find current organization and tenant
       const currentOrganization = user.availableOrganizations.find(org => org.id === currentOrgId) || null;

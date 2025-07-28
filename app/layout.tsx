@@ -4,7 +4,6 @@ import "./globals.css";
 import { AuthProvider } from "@/modules/auth";
 import { DashboardLayout } from "@/components/layouts/DashboardLayout";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
-import { GlobalStateProvider } from "@/contexts/GlobalStateContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -37,13 +36,11 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <GlobalStateProvider>
-            <AuthProvider>
-              <DashboardLayout>
-                {children}
-              </DashboardLayout>
-            </AuthProvider>
-          </GlobalStateProvider>
+          <AuthProvider>
+            <DashboardLayout>
+              {children}
+            </DashboardLayout>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>
