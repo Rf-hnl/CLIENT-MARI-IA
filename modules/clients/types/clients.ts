@@ -63,6 +63,9 @@ export const CLIENT_FIELD_CONFIG: IClientFieldConfig = {
 
 // --- Client Model ---
 export interface IClient {
+  id: string; // Unique system identifier
+  id: string; // Unique system identifier
+  id: string; // Unique system identifier
   // REQUIRED FIELDS - Critical for operation
   name: string;
   national_id: string;

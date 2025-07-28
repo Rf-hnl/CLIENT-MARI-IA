@@ -43,7 +43,7 @@ import {
   getValidationSummary 
 } from '@/modules/clients/utils/clientValidation';
 import ContactActionsModal from '@/components/clients/ContactActionsModal';
-import ClientDetailsModal from '@/components/clients/ClientDetailsModal';
+
 
 export default function ClientsAdmin() {
   const { currentUser } = useAuth();
@@ -55,7 +55,7 @@ export default function ClientsAdmin() {
   // Filtrar clientes
   const filteredClients = clients.filter(client => {
     const matchesSearch = client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         client.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (client.email ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
                          client.phone.includes(searchTerm);
     
     const matchesStatus = statusFilter === 'all' || client.status === statusFilter;
@@ -249,20 +249,20 @@ export default function ClientsAdmin() {
               {filteredClients.map((client, index) => {
                 const validation = validateClientData(client);
                 return (
-                <TableRow key={index}>
+                <TableRow key={client.id}>
                   <TableCell>
                     <div className="flex flex-col">
                       <p className="font-medium uppercase">{client.name}</p>
                       <p className="text-xs text-muted-foreground">{client.national_id}</p>
                       <div className="flex gap-1 mt-1">
-                        {client.tags.slice(0, 2).map((tag, tagIndex) => (
+                        {(client.tags || []).slice(0, 2).map((tag, tagIndex) => (
                           <Badge key={tagIndex} variant="outline" className="text-xs">
                             {tag}
                           </Badge>
                         ))}
-                        {client.tags.length > 2 && (
+                        {(client.tags || []).length > 2 && (
                           <Badge variant="outline" className="text-xs">
-                            +{client.tags.length - 2}
+                            +{(client.tags || []).length - 2}
                           </Badge>
                         )}
                       </div>
@@ -350,8 +350,15 @@ export default function ClientsAdmin() {
                   
                   <TableCell>
                     <div className="flex items-center gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => router.push(`/clients/${client.id}`)}
+                      >
+                        Ver Detalles
+                      </Button>
                       <ContactActionsModal client={client} />
-                      <ClientDetailsModal client={client} />
+                      
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" className="h-8 w-8 p-0">

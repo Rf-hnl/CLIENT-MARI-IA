@@ -9,6 +9,7 @@ import { IClient, ICallLog, IWhatsAppRecord, IClientAIProfile, IMessageRole } fr
 
 export const mockClients: IClient[] = [
   {
+    id: "cl_001",
     name: "Carlos Rodríguez González",
     email: "carlos.rodriguez@ejemplo.com",
     phone: "+507 6311-6918",
@@ -68,6 +69,7 @@ export const mockClients: IClient[] = [
     }
   },
   {
+    id: "cl_002",
     name: "María Carmen López Fernández",
     email: undefined, // Missing recommended field
     phone: "+507 6311-6918",
@@ -127,6 +129,7 @@ export const mockClients: IClient[] = [
     }
   },
   {
+    id: "cl_003",
     name: "José Antonio Martín Ruiz",
     email: "ja.martin@empresa.pa",
     phone: "+507 6311-6918",
@@ -186,6 +189,7 @@ export const mockClients: IClient[] = [
     }
   },
   {
+    id: "cl_004",
     name: "Ana Isabel Jiménez Torres",
     email: "ana.jimenez@hotmail.com",
     phone: "+507 6311-6918",
@@ -245,6 +249,7 @@ export const mockClients: IClient[] = [
     }
   },
   {
+    id: "cl_005",
     name: "Francisco Javier Sánchez Moreno",
     email: "fj.sanchez@gmail.com",
     phone: "+507 6311-6918",
@@ -308,7 +313,7 @@ export const mockClients: IClient[] = [
 export const mockCallLogs: ICallLog[] = [
   {
     id: "call_001",
-    clientId: "carlos_rodriguez",
+    clientId: "cl_001",
     timestamp: {
       _seconds: 1705190400,
       _nanoseconds: 0
@@ -326,7 +331,7 @@ export const mockCallLogs: ICallLog[] = [
   },
   {
     id: "call_002",
-    clientId: "maria_lopez",
+    clientId: "cl_002",
     timestamp: {
       _seconds: 1705104000,
       _nanoseconds: 0
@@ -344,7 +349,7 @@ export const mockCallLogs: ICallLog[] = [
   },
   {
     id: "call_003",
-    clientId: "francisco_sanchez",
+    clientId: "cl_005",
     timestamp: {
       _seconds: 1705017600,
       _nanoseconds: 0
@@ -365,7 +370,7 @@ export const mockCallLogs: ICallLog[] = [
 export const mockWhatsAppRecords: IWhatsAppRecord[] = [
   {
     id: "wa_001",
-    clientId: "carlos_rodriguez",
+    clientId: "cl_001",
     timestamp: {
       _seconds: 1705276800,
       _nanoseconds: 0
@@ -379,7 +384,7 @@ export const mockWhatsAppRecords: IWhatsAppRecord[] = [
   },
   {
     id: "wa_002",
-    clientId: "carlos_rodriguez",
+    clientId: "cl_001",
     timestamp: {
       _seconds: 1705278600,
       _nanoseconds: 0
@@ -392,7 +397,7 @@ export const mockWhatsAppRecords: IWhatsAppRecord[] = [
   },
   {
     id: "wa_003",
-    clientId: "maria_lopez",
+    clientId: "cl_002",
     timestamp: {
       _seconds: 1705104000,
       _nanoseconds: 0
@@ -451,7 +456,7 @@ export const mockWhatsAppRecords: IWhatsAppRecord[] = [
   },
   {
     id: "wa_004",
-    clientId: "ana_jimenez",
+    clientId: "cl_004",
     timestamp: {
       _seconds: 1704931200,
       _nanoseconds: 0
@@ -466,7 +471,7 @@ export const mockWhatsAppRecords: IWhatsAppRecord[] = [
 
 export const mockClientAIProfiles: IClientAIProfile[] = [
   {
-    clientId: "carlos_rodriguez",
+    clientId: "cl_001",
     analysisDate: {
       _seconds: 1705276800,
       _nanoseconds: 0
@@ -482,7 +487,7 @@ export const mockClientAIProfiles: IClientAIProfile[] = [
     }
   },
   {
-    clientId: "maria_lopez",
+    clientId: "cl_002",
     analysisDate: {
       _seconds: 1705190400,
       _nanoseconds: 0
@@ -498,7 +503,7 @@ export const mockClientAIProfiles: IClientAIProfile[] = [
     }
   },
   {
-    clientId: "jose_martin",
+    clientId: "cl_003",
     analysisDate: {
       _seconds: 1705363200,
       _nanoseconds: 0
@@ -514,7 +519,7 @@ export const mockClientAIProfiles: IClientAIProfile[] = [
     }
   },
   {
-    clientId: "francisco_sanchez",
+    clientId: "cl_005",
     analysisDate: {
       _seconds: 1705449600,
       _nanoseconds: 0
