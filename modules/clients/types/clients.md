@@ -65,25 +65,26 @@
                     }
                     {
   "customerInteractions": {
-    "callLogs": {
+    "callLogs": [{
       "id": { "type": "string" },
       "clientId": { "type": "string" },
       "timestamp": { "type": "timestamp" },
-      "callType": { "type": "string", "enum": ["collection", "interaction", "support", "other"] },
-      "durationMinutes": { "type": "number" },
       "agentId": { "type": "string" },
       "notes": { "type": "string", "nullable": true },
-      "outcome": { "type": "string", "nullable": true }
-    },
+    }],
     "whatsAppRecords": {
       "id": { "type": "string" },
       "clientId": { "type": "string" },
       "timestamp": { "type": "timestamp" },
-      "messageDirection": { "type": "string", "enum": ["inbound", "outbound"] },
-      "agentId": { "type": "string", "nullable": true },
-      "messageContent": { "type": "string" },
-      "attachments": { "type": "array", "items": { "type": "string" }, "nullable": true },
-      "interactionType": { "type": "string", "enum": ["text", "media", "template", "other"] }
+      "agentId": { "type": "string" },
+      "notes": { "type": "string", "nullable": true },
+    },
+    "emailRecords": {
+      "id": { "type": "string" },
+      "clientId": { "type": "string" },
+      "timestamp": { "type": "timestamp" },
+      "agentId": { "type": "string" },
+      "notes": { "type": "string", "nullable": true },
     },
     "clientAIProfiles": {
       "clientId": { "type": "string" },

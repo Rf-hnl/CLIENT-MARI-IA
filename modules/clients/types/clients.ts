@@ -61,9 +61,10 @@ export const CLIENT_FIELD_CONFIG: IClientFieldConfig = {
   tags: { requirement: "optional", category: "collection", description: "Etiquetas del cliente" }
 };
 
-// --- Client Model ---
+// --- Client Model (Actualizado para coincidir con estructura real) ---
 export interface IClient {
   id: string; // Unique system identifier
+  
   // REQUIRED FIELDS - Critical for operation
   name: string;
   national_id: string;
@@ -72,29 +73,24 @@ export interface IClient {
   status: string; // e.g., "current", "overdue", "paid"
   loan_letter: string;
   
-  // RECOMMENDED FIELDS - Important for effectiveness
-  email?: string;
+  // CONTACT FIELDS - Recommended for effectiveness
+  email?: string; // Campo directo del cliente (encontrado en datos reales)
   address?: string;
   city?: string;
   province?: string;
-  employment_status?: string;
-  monthly_income?: number;
-  preferred_contact_method?: "whatsapp" | "phone" | "email";
-  
-  // OPTIONAL FIELDS - Nice to have
   postal_code?: string;
   country?: string;
+  preferred_contact_method?: "whatsapp" | "phone" | "email";
+  best_contact_time?: string;
+  
+  // EMPLOYMENT FIELDS - Optional but important
+  employment_status?: string;
   employer?: string;
   position?: string;
+  monthly_income?: number;
   employment_verified?: boolean;
-  best_contact_time?: string;
-  response_score?: number;
-  collection_strategy?: string;
-  notes?: string;
-  internal_notes?: string;
-  tags?: string[];
   
-  // SYSTEM CALCULATED FIELDS - Auto-generated
+  // FINANCIAL FIELDS - System calculated
   payment_date: IFirebaseTimestamp;
   installment_amount: number;
   pending_installments: number;
@@ -103,13 +99,38 @@ export interface IClient {
   days_overdue: number;
   last_payment_date: IFirebaseTimestamp;
   last_payment_amount: number;
+  
+  // RISK ASSESSMENT FIELDS
   credit_score: number;
-  risk_category: string;
+  risk_category: string; // e.g., "prime", "near-prime", "subprime"
   credit_limit: number;
-  available_credit: number;
+  available_credit: number; // Encontrado en datos reales
   recovery_probability: number;
+  
+  // COLLECTION FIELDS
+  response_score?: number;
+  collection_strategy?: string;
+  notes?: string;
+  internal_notes?: string;
+  tags?: string[];
+  
+  // SYSTEM FIELDS
   created_at: IFirebaseTimestamp;
   updated_at: IFirebaseTimestamp;
+}
+
+// --- Client Data Wrapper (estructura real en Firebase) ---
+export interface IClientDocument {
+  _data: IClient;
+  customerInteractions?: ICustomerInteractions;
+}
+
+// --- Customer Interactions Container ---
+export interface ICustomerInteractions {
+  callLogs?: ICallLog[];
+  whatsAppRecords?: IWhatsAppRecord[];
+  emailRecords?: IEmailRecord[];
+  clientAIProfiles?: IClientAIProfile;
 }
 
 // --- Customer Interaction Models ---
@@ -158,6 +179,22 @@ export interface IWhatsAppRecord {
   botIntent?: string; // Detected intent from bot
   botConfidence?: number; // Bot confidence score (0-1)
   requiresHumanHandoff?: boolean; // Whether bot escalated to human
+}
+
+// --- Email Record Model ---
+export interface IEmailRecord {
+  id: string; // Document ID
+  clientId: string;
+  timestamp: IFirebaseTimestamp;
+  direction: "inbound" | "outbound";
+  agentId?: string; // Optional if email is initiated by client
+  subject: string;
+  content: string;
+  attachments?: string[]; // Array of URLs or references
+  emailType: "collection" | "support" | "notification" | "other";
+  status: "sent" | "delivered" | "read" | "bounced" | "failed";
+  threadId?: string; // For email thread tracking
+  priority: "low" | "normal" | "high" | "urgent";
 }
 
 // --- AI Client Profile Model ---
