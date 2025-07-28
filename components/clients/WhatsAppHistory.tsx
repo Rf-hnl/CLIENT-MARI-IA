@@ -1,7 +1,7 @@
 'use client';
 
 import { IWhatsAppRecord, IFirebaseTimestamp } from '@/modules/clients/types/clients'; // Import IFirebaseTimestamp
-// import { mockWhatsAppRecords } from '@/modules/clients/mock/clientsMockData'; // Removed mock import
+// Mock data removed - TODO: Replace with real Firebase data
 import { safeFormatDate } from '@/utils/dateFormat';
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -28,9 +28,9 @@ export const WhatsAppHistory = ({ clientId, filterDays }: WhatsAppHistoryProps) 
         // const data = await response.json();
         // setWhatsappRecords(data);
 
-        // For now, simulate fetching with mock data (remove this in production)
-        const { mockWhatsAppRecords } = await import('@/modules/clients/mock/clientsMockData');
-        setWhatsappRecords(mockWhatsAppRecords);
+        // TODO: Replace with real Firebase API call
+        // For now, set empty array
+        setWhatsappRecords([]);
 
       } catch (error) {
         console.error('Error fetching WhatsApp history:', error);

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/modules/auth';
 import { useRouter } from 'next/navigation';
-import { mockClients } from '@/modules/clients/mock/clientsMockData';
+import { useClients } from '@/modules/clients/hooks/useClients';
 import { IClient } from '@/modules/clients/types/clients';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -21,7 +21,6 @@ import {
   MoreHorizontal, 
   Search, 
   Filter, 
-  Plus,
   Phone,
   Mail,
   MapPin,
@@ -43,12 +42,13 @@ import {
   getValidationSummary 
 } from '@/modules/clients/utils/clientValidation';
 import ContactActionsModal from '@/components/clients/ContactActionsModal';
+import { NewClientModal } from '@/components/clients/NewClientModal';
 
 
 export default function ClientsAdmin() {
   const { currentUser } = useAuth();
   const router = useRouter();
-  const [clients] = useState<IClient[]>(mockClients);
+  const { clients, isLoading, error, currentOrganization, currentTenant, refetch } = useClients();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
@@ -115,6 +115,40 @@ export default function ClientsAdmin() {
     );
   }
 
+  // Mostrar loading mientras se cargan los clientes
+  if (isLoading) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="text-center py-8">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Cargando clientes...</p>
+          {currentTenant && currentOrganization && (
+            <p className="text-sm text-muted-foreground mt-2">
+              {currentTenant.companyInfo?.name} - {currentOrganization.name}
+            </p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Mostrar error si hay algún problema
+  if (error) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="text-center py-8">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md mx-auto">
+            <h3 className="text-red-800 font-medium mb-2">Error al cargar clientes</h3>
+            <p className="text-red-600 text-sm mb-4">{error}</p>
+            <Button onClick={refetch} variant="outline" size="sm">
+              Reintentar
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto p-6 space-y-6">
       {/* Header Section */}
@@ -124,10 +158,26 @@ export default function ClientsAdmin() {
           <p className="text-muted-foreground">
             Gestiona de manera centralizada a los clientes de la organización
           </p>
+          {currentTenant && currentOrganization && (
+            <div className="flex items-center gap-2 mt-2">
+              <span className="text-sm text-muted-foreground">
+                {currentTenant.companyInfo?.name} - {currentOrganization.name}
+              </span>
+              <Button 
+                onClick={refetch} 
+                variant="ghost" 
+                size="sm"
+                className="h-6 px-2 text-xs"
+                disabled={isLoading}
+              >
+                ↻ Actualizar
+              </Button>
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-2">
-          <span className="px-2 py-1 bg-orange-100 text-orange-800 text-xs font-medium rounded-full">
-            En desarrollo
+          <span className="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
+            ✓ Conectado a Firebase
           </span>
         </div>
       </div>
@@ -189,10 +239,7 @@ export default function ClientsAdmin() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Lista de Clientes</CardTitle>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Nuevo Cliente
-            </Button>
+            <NewClientModal />
           </div>
           
           {/* Search and Filters */}
@@ -246,7 +293,7 @@ export default function ClientsAdmin() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredClients.map((client, index) => {
+              {filteredClients.map((client) => {
                 const validation = validateClientData(client);
                 return (
                 <TableRow key={client.id}>

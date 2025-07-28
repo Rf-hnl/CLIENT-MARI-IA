@@ -4,7 +4,13 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { safeFormatDate } from '@/utils/dateFormat';
 import { PhoneCall, Mic, RefreshCcw, ArrowLeft } from 'lucide-react';
-import { IPhoneCallConversation, mockPhoneCallConversations } from '@/modules/clients/mock/phoneCallMockData';
+// TODO: Implement proper phone call conversation interface
+interface IPhoneCallConversation {
+  id: string;
+  clientId: string;
+  callLog: any;
+  conversationSegments?: any[];
+}
 
 import { useMemo } from 'react'; // Import useMemo
 

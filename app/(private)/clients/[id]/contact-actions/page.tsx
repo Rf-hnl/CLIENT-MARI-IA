@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { mockClients } from '@/modules/clients/mock/clientsMockData';
+import { useClients } from '@/modules/clients/hooks/useClients';
 import { IClient } from '@/modules/clients/types/clients';
 import { Button } from '@/components/ui/button';
 import {
@@ -28,14 +28,23 @@ export default function ContactActionsPage() {
   const params = useParams();
   const router = useRouter();
   const [client, setClient] = useState<IClient | null>(null);
-  const [filterDays, setFilterDays] = useState<number | null>(null); // State for filter: null for all, number for days
+  const [filterDays, setFilterDays] = useState<number | null>(null);
+  const { clients, isLoading } = useClients();
 
   useEffect(() => {
-    if (params.id) {
-      const foundClient = mockClients.find(c => c.id === params.id);
+    if (params.id && clients.length > 0) {
+      const foundClient = clients.find(c => c.id === params.id);
       setClient(foundClient || null);
     }
-  }, [params.id]);
+  }, [params.id, clients]);
+
+  if (isLoading) {
+    return (
+      <div className="p-4 bg-white min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   if (!client) {
     return (

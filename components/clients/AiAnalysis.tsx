@@ -1,7 +1,7 @@
 'use client';
 
 import { IClientAIProfile } from '@/modules/clients/types/clients';
-import { mockClientAIProfiles } from '@/modules/clients/mock/clientsMockData';
+// Mock data removed - TODO: Implement real AI analysis data from Firebase
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { safeFormatDate } from '@/utils/dateFormat';
 
@@ -18,7 +18,8 @@ interface AiAnalysisProps {
 }
 
 export const AiAnalysis = ({ clientId }: AiAnalysisProps) => {
-  const profile = mockClientAIProfiles.find(p => p.clientId === clientId);
+  // TODO: Replace with real AI profile data from Firebase
+  const profile: IClientAIProfile | undefined = undefined;
 
   if (!profile) {
     return <p>No hay análisis de IA para este cliente.</p>;

@@ -5,9 +5,16 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PhoneCall } from 'lucide-react';
 import { PhoneCallList, PhoneCallTranscription } from '@/components/clients/PhoneCallHistory';
-import { IPhoneCallConversation } from '@/modules/clients/mock/phoneCallMockData'; // Keep interface import
-import { useEffect, useMemo } from 'react'; // Import useEffect and useMemo
-import { IFirebaseTimestamp } from '@/modules/clients/types/clients'; // Import IFirebaseTimestamp
+import { useEffect, useMemo } from 'react';
+import { ICallLog, IFirebaseTimestamp } from '@/modules/clients/types/clients';
+
+// Temporary interface until we implement full call conversation system
+interface IPhoneCallConversation {
+  id: string;
+  clientId: string;
+  callLog: ICallLog;
+  conversationSegments?: any[];
+}
 
 interface CallHistoryAndTranscriptionViewProps {
   clientId: string;
@@ -27,9 +34,9 @@ export const CallHistoryAndTranscriptionView = ({ clientId, filterDays }: CallHi
         // const data = await response.json();
         // setAllConversations(data);
 
-        // For now, simulate fetching with mock data (remove this in production)
-        const { mockPhoneCallConversations } = await import('@/modules/clients/mock/phoneCallMockData');
-        setAllConversations(mockPhoneCallConversations.filter(conv => conv.clientId === clientId));
+        // TODO: Replace with real Firebase API call
+        // For now, set empty array
+        setAllConversations([]);
       } catch (error) {
         console.error('Error fetching call history:', error);
         setAllConversations([]); // Set to empty on error

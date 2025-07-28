@@ -1,6 +1,15 @@
 'use client';
 
-import { IEmailRecord, mockEmailRecords } from '@/modules/clients/mock/emailMockData';
+// TODO: Implement IEmailRecord type and real data fetching
+interface IEmailRecord {
+  id: string;
+  clientId: string;
+  subject: string;
+  content: string;
+  timestamp: any;
+  direction: 'inbound' | 'outbound';
+  status?: string;
+}
 import { safeFormatDate } from '@/utils/dateFormat';
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -18,8 +27,10 @@ export const EmailHistory = ({ clientId, filterDays }: EmailHistoryProps) => {
   const [selectedAction, setSelectedAction] = useState('');
 
   const filteredRecords = useMemo(() => {
+    // TODO: Replace with real data from Firebase
+    const emailRecords: IEmailRecord[] = [];
     const now = new Date();
-    return mockEmailRecords.filter(record => {
+    return emailRecords.filter(record => {
       const recordDate = new Date(record.timestamp._seconds * 1000);
       const isForClient = record.clientId === clientId;
 
