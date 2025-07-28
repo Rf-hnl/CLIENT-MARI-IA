@@ -3,6 +3,8 @@
 import { useEffect } from 'react';
 import { useAuth } from '@/modules/auth';
 import { useRouter } from 'next/navigation';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 
 export default function Dashboard() {
   const { currentUser, logout } = useAuth();
@@ -32,75 +34,112 @@ export default function Dashboard() {
   if (!currentUser || !currentUser.emailVerified) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-indigo-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center">
-              <h1 className="text-xl font-semibold text-gray-900">
-                Dashboard - Client Mar-IA
-              </h1>
-            </div>
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-700">
-                {currentUser.email}
-              </span>
-              <a
-                href="/profile"
-                className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-              >
-                Mi Perfil
-              </a>
-              <button
-                onClick={handleLogout}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-              >
-                Cerrar Sesión
-              </button>
-            </div>
-          </div>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight">Dashboard</h1>
+          <p className="text-sm text-muted-foreground">
+            Bienvenido de vuelta, {currentUser.displayName || currentUser.email}
+          </p>
         </div>
-      </nav>
-
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
-          <div className="border-4 border-dashed border-gray-200 rounded-lg h-96 p-8">
-            <div className="text-center">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                ¡Bienvenido al Dashboard!
-              </h2>
-              <p className="text-gray-600 mb-6">
-                Has iniciado sesión exitosamente con Firebase Authentication.
-              </p>
-              
-              <div className="bg-white shadow rounded-lg p-6 max-w-md mx-auto">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">
-                  Información del Usuario
-                </h3>
-                <div className="text-left space-y-2">
-                  <p><strong>Email:</strong> {currentUser.email}</p>
-                  <p><strong>UID:</strong> {currentUser.uid}</p>
-                  <p><strong>Email Verificado:</strong> {currentUser.emailVerified ? 'Sí' : 'No'}</p>
-                  <p><strong>Creado:</strong> {currentUser.metadata.creationTime}</p>
-                  <p><strong>Último acceso:</strong> {currentUser.metadata.lastSignInTime}</p>
-                </div>
-              </div>
-
-              <div className="mt-8">
-                <p className="text-sm text-gray-500">
-                  Este es una página protegida. Solo usuarios autenticados y verificados pueden acceder.
-                </p>
-              </div>
-            </div>
-          </div>
+        <div className="flex items-center gap-4">
+          <Button variant="outline" onClick={() => router.push('/profile')}>
+            Mi Perfil
+          </Button>
+          <Button onClick={handleLogout}>
+            Cerrar Sesión
+          </Button>
         </div>
-      </main>
+      </div>
+
+      {/* Main Content */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {/* Welcome Card */}
+        <Card className="md:col-span-2 lg:col-span-2">
+          <CardHeader>
+            <CardTitle>¡Bienvenido al Dashboard!</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-muted-foreground">
+              Has iniciado sesión exitosamente con Firebase Authentication.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Esta es una página protegida. Solo usuarios autenticados y verificados pueden acceder.
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* User Info Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Información del Usuario</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <div className="space-y-1">
+              <p className="text-sm"><strong>Email:</strong></p>
+              <p className="text-sm text-muted-foreground">{currentUser.email}</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-sm"><strong>UID:</strong></p>
+              <p className="text-sm text-muted-foreground font-mono text-xs">{currentUser.uid}</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-sm"><strong>Email Verificado:</strong></p>
+              <p className="text-sm text-muted-foreground">{currentUser.emailVerified ? 'Sí' : 'No'}</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-sm"><strong>Creado:</strong></p>
+              <p className="text-sm text-muted-foreground">{currentUser.metadata.creationTime}</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-sm"><strong>Último acceso:</strong></p>
+              <p className="text-sm text-muted-foreground">{currentUser.metadata.lastSignInTime}</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Status Cards */}
+      <div className="grid gap-6 md:grid-cols-3">
+        <Card>
+          <CardHeader>
+            <CardTitle>Estado del Sistema</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-2">
+              <div className="h-2 w-2 bg-green-500 rounded-full"></div>
+              <span className="text-sm text-muted-foreground">Todo funcionando correctamente</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Módulos Activos</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">2</p>
+            <p className="text-sm text-muted-foreground">Dashboard y Perfil</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Versión</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-lg font-semibold">v1.0.0</p>
+            <p className="text-sm text-muted-foreground">Auth Module</p>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

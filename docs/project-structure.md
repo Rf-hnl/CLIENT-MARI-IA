@@ -4,8 +4,8 @@ Este documento describe la estructura organizacional del proyecto Client Mar-IA,
 
 ## 📁 Estructura de Directorios
 
-### `/modules/` - ✨ **NUEVA: Arquitectura Modular**
-Organización modular del código por funcionalidad:
+### `/modules/` - ✨ **NUEVA: Arquitectura Modular y Submodular**
+Organización modular del código por funcionalidad con soporte para submódulos:
 
 #### `/modules/auth/` - Módulo de Autenticación
 - **`pages/`** - Páginas del módulo de autenticación
@@ -20,16 +20,50 @@ Organización modular del código por funcionalidad:
 - **`services/firebase.ts`** - Configuración Firebase para auth
 - **`index.ts`** - Exportaciones centralizadas del módulo
 
+#### `/modules/clients/` - ✨ **NUEVO: Módulo de Clientes (Submodular)**
+Módulo principal con submódulos especializados:
+
+- **`types/clients.ts`** - Tipos TypeScript para clientes y facturación
+  - `Client` - Interfaz de cliente
+  - `ClientBilling` - Interfaz de facturación
+  - `ClientsContextType` - Tipos del contexto
+- **`context/ClientsContext.tsx`** - Context principal de clientes
+  - Estado global de clientes
+  - Funciones CRUD preparadas para Firebase
+  - Manejo de loading y errores
+- **`hooks/useClients.ts`** - Hooks especializados
+  - `useClients` - Hook principal
+  - `useClientsAdmin` - Hook para administración
+  - `useClientsBilling` - Hook para facturación
+  - `useClientsStats` - Hook para estadísticas
+- **`components/ProtectedClientRoute.tsx`** - Protección de rutas
+- **`admin/index.ts`** - **Submódulo de Administración**
+  - Funciones específicas para gestión de clientes
+  - Validaciones y utilidades de administración
+- **`billing/index.ts`** - **Submódulo de Facturación**
+  - Funciones específicas para cobros
+  - Cálculos y formateo de facturas
+  - Estados de facturación
+- **`__tests__/ClientsContext.test.tsx`** - Tests del módulo
+- **`index.ts`** - Exportaciones centralizadas del módulo
+
 ### `/app/` - Rutas de Next.js App Router
 Delegación a módulos especializados:
 
+#### **Rutas Principales:**
 - **`/app/page.tsx`** - Importa LoginPage desde /modules/auth/
-- **`/app/register/page.tsx`** - Importa RegisterPage desde /modules/auth/
-- **`/app/verify/page.tsx`** - Importa VerifyPage desde /modules/auth/
-- **`/app/forgot-password/page.tsx`** - Importa ForgotPasswordPage desde /modules/auth/
-- **`/app/dashboard/page.tsx`** - Dashboard principal (ruta protegida)
-- **`/app/profile/page.tsx`** - ✨ **Gestión de perfil de usuario (ruta protegida)**
-- **`/app/layout.tsx`** - Layout raíz con AuthProvider global
+- **`/app/(public)/auth/`** - Rutas públicas de autenticación
+  - **`login/page.tsx`** - Página de login
+  - **`register/page.tsx`** - Página de registro
+  - **`verify/page.tsx`** - Verificación de email
+  - **`forgot-password/page.tsx`** - Recuperación de contraseña
+- **`/app/(private)/`** - Rutas protegidas
+  - **`dashboard/page.tsx`** - Dashboard principal
+  - **`profile/page.tsx`** - Gestión de perfil de usuario
+  - **`clients/`** - ✨ **NUEVO: Submódulos de Clientes**
+    - **`admin/page.tsx`** - Administración de clientes (módulo en desarrollo)
+    - **`billing/page.tsx`** - Cobros y facturación (módulo en desarrollo)
+- **`/app/layout.tsx`** - Layout raíz con AuthProvider y ThemeProvider
 - **`/app/globals.css`** - Estilos globales con Tailwind CSS
 
 ### `/components/` - Componentes reutilizables
@@ -104,18 +138,43 @@ Tipos globales sin uso de `any`:
 - Protección de rutas con middleware
 - Persistencia de sesión
 
-### 2. **Módulo de Gestión de Perfil** ✨ **NUEVO**
+### 2. **Módulo de Gestión de Perfil** ✅
 - Visualización de datos del usuario
 - Edición de nombre de usuario
 - Subida de foto de perfil con Cloudinary
 - Validación de formularios con TypeScript estricto
 - UI responsive con shadcn/ui
 
+### 3. **Módulo de Clientes** ✨ **NUEVO: Sistema Submodular**
+Arquitectura modular con submódulos especializados:
+
+#### **Submódulo de Administración** 🚧 *En desarrollo*
+- Gestión CRUD de clientes
+- Validación de datos
+- Estados de cliente (activo/inactivo/pendiente)
+- Integración con Firebase preparada
+
+#### **Submódulo de Facturación** 🚧 *En desarrollo*
+- Gestión de facturas y cobros
+- Cálculos automáticos
+- Estados de facturación
+- Reportes de pagos
+
+#### **Características del Sistema Modular:**
+- **Context unificado** - Estado global compartido entre submódulos
+- **Hooks especializados** - Funciones específicas por submódulo
+- **Tipos TypeScript** - Interfaces bien definidas
+- **Protección de rutas** - Permisos por submódulo
+- **Testing preparado** - Tests unitarios e integración
+- **Firebase ready** - Preparado para integración completa
+
 ## 🔒 Seguridad y Protección
 
 ### Rutas Protegidas:
 - `/dashboard` - Requiere autenticación y email verificado
 - `/profile` - Requiere autenticación y email verificado
+- `/clients/admin` - ✨ **NUEVO** - Administración de clientes
+- `/clients/billing` - ✨ **NUEVO** - Cobros y facturación
 
 ### Validaciones:
 - Tipos TypeScript estrictos (sin uso de `any`)

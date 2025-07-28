@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { updateProfile } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { auth } from '@/lib/firebase/client';
 
 export async function PUT(request: NextRequest) {
   try {
@@ -36,9 +36,9 @@ export async function PUT(request: NextRequest) {
         emailVerified: user.emailVerified,
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     return NextResponse.json(
-      { error: error.message || 'Profile update failed' },
+      { error: (error as Error).message || 'Profile update failed' },
       { status: 400 }
     );
   }
