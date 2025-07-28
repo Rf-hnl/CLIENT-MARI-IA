@@ -1,9 +1,8 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import { useState } from 'react';
 import { AppSidebar } from '@/components/app-sidebar';
-import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
+import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import SimpleGlobalHeader from '@/components/layout/SimpleGlobalHeader';
 
 interface DashboardLayoutProps {
