@@ -1,9 +1,10 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
+import { useState } from 'react';
 import { AppSidebar } from '@/components/app-sidebar';
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
-import { Separator } from '@/components/ui/separator';
+import GlobalHeader from '@/components/layout/GlobalHeader';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -12,11 +13,11 @@ interface DashboardLayoutProps {
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const pathname = usePathname();
   
-  // Rutas públicas que no necesitan sidebar
+  // Rutas públicas que no necesitan sidebar ni header
   const publicRoutes = ['/auth/login', '/auth/register', '/auth/verify', '/auth/forgot-password'];
   const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route)) || pathname === '/';
   
-  // Si es ruta pública, renderizar sin sidebar
+  // Si es ruta pública, renderizar sin sidebar ni header
   if (isPublicRoute) {
     return (
       <div className="min-h-screen bg-background">
@@ -29,11 +30,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2 px-4">
-          <SidebarTrigger className="-ml-1" />
-          <Separator orientation="vertical" className="mr-2 h-4" />
-        </header>
-        <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
+        {/* Global Header integrado */}
+        <GlobalHeader />
+        
+        {/* Contenido principal */}
+        <div className="flex flex-1 flex-col gap-4 p-4">
           {children}
         </div>
       </SidebarInset>

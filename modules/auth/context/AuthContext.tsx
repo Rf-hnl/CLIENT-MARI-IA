@@ -13,6 +13,7 @@ import {
   onAuthStateChanged,
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase/client';
+import { useGlobalStateInitializer } from '@/hooks/useGlobalState';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -38,6 +39,7 @@ export function useAuth() {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const { initializeFromUser, clearGlobalState } = useGlobalStateInitializer();
 
   async function register(email: string, password: string) {
     const result = await createUserWithEmailAndPassword(auth, email, password);
@@ -50,6 +52,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   async function logout() {
     await signOut(auth);
+    // Clear global state when logging out
+    clearGlobalState();
   }
 
   async function resetPassword(email: string) {
@@ -68,13 +72,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
+      
+      if (user) {
+        // Initialize global state when user logs in
+        try {
+          await initializeFromUser(user);
+        } catch (error) {
+          console.error('Error initializing global state:', error);
+          // You might want to handle this error more gracefully
+        }
+      } else {
+        // Clear global state when user logs out
+        clearGlobalState();
+      }
+      
       setLoading(false);
     });
 
     return unsubscribe;
-  }, []);
+  }, [initializeFromUser, clearGlobalState]);
 
   const value = {
     currentUser,

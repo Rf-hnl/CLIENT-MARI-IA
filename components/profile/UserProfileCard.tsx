@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { User } from 'firebase/auth';
 import { updateProfile } from 'firebase/auth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -27,7 +27,11 @@ import {
   Camera,
   Loader2,
   AlertCircle,
-  Upload
+  Upload,
+  RefreshCw,
+  AlertTriangle,
+  Database,
+  Building2
 } from 'lucide-react';
 import { 
   FirebaseUserRecord, 
@@ -37,8 +41,33 @@ import {
   getPrimaryProvider,
   getProviderInfo
 } from '@/types/firebaseUser';
-import { formatDate } from '@/utils/dateFormat';
+import { 
+  CombinedUserData,
+  UidVerificationResult,
+  FirestoreUser,
+  UserEditFormData,
+  UserUpdateResult,
+  createUserEditFormData,
+  createUpdateDataFromForm
+} from '@/types/firestoreUser';
+import { 
+  getCombinedUserData,
+  synchronizeUserUid,
+  ensureFirestoreUser,
+  updateUserFromForm
+} from '@/lib/firestore/userService';
+import { formatDate, safeFormatDate } from '@/utils/dateFormat';
 import { uploadImageToCloudinary, validateImageFile } from '@/lib/cloudinary';
+import { 
+  validateUserEditForm, 
+  ValidationErrors, 
+  getFieldError, 
+  hasFormErrors,
+  sanitizeUserFormData,
+  validateField 
+} from '@/lib/validations/userValidation';
+import { useCurrentSession, useOrganizations } from '@/hooks/useGlobalState';
+import OrganizationSwitcher from '@/components/organizations/OrganizationSwitcher';
 
 interface UserProfileCardProps {
   user: User;
@@ -49,21 +78,175 @@ export default function UserProfileCard({ user, onProfileUpdate }: UserProfileCa
   const [isEditing, setIsEditing] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [isSyncingUid, setIsSyncingUid] = useState(false);
+  const [isLoadingFirestore, setIsLoadingFirestore] = useState(true);
   const [userRecord, setUserRecord] = useState<FirebaseUserRecord>(() => createFirebaseUserRecord(user));
+  const [combinedUserData, setCombinedUserData] = useState<CombinedUserData | null>(null);
   const [editedDisplayName, setEditedDisplayName] = useState(user.displayName || '');
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [uploadMessage, setUploadMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [firestoreFormData, setFirestoreFormData] = useState<UserEditFormData | null>(null);
+  const [isUpdatingFirestore, setIsUpdatingFirestore] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Global state hooks
+  const { currentOrganization, currentTenant } = useCurrentSession();
+  const { availableOrganizations } = useOrganizations();
   
   const primaryProvider = getPrimaryProvider(userRecord);
   const providerInfo = getProviderInfo(primaryProvider);
   
+  // Load combined user data from Firestore
+  const loadCombinedUserData = async () => {
+    try {
+      setIsLoadingFirestore(true);
+      const combined = await getCombinedUserData(userRecord);
+      setCombinedUserData(combined);
+      
+      // Initialize Firestore form data if user exists
+      if (combined.firestoreUser) {
+        const formData = createUserEditFormData(combined.firestoreUser);
+        setFirestoreFormData(formData);
+      }
+    } catch (error) {
+      console.error('Error loading combined user data:', error);
+      // Set a fallback combined data structure
+      setCombinedUserData({
+        firebaseAuth: userRecord,
+        firestoreUser: null,
+        uidVerification: {
+          isMatching: false,
+          firebaseAuthUid: userRecord.uid,
+          firestoreUid: null,
+          requiresSync: true,
+          message: 'Error al cargar datos de Firestore'
+        }
+      });
+      setFirestoreFormData(null);
+    } finally {
+      setIsLoadingFirestore(false);
+    }
+  };
+
+  // Synchronize UID between Firebase Auth and Firestore
+  const handleUidSync = async () => {
+    if (!combinedUserData?.firestoreUser) return;
+    
+    try {
+      setIsSyncingUid(true);
+      await synchronizeUserUid(userRecord.uid, combinedUserData.firestoreUser);
+      // Reload combined data to reflect changes
+      await loadCombinedUserData();
+      setUploadMessage({ type: 'success', text: 'UID sincronizado exitosamente' });
+    } catch (error) {
+      setUploadMessage({ 
+        type: 'error', 
+        text: error instanceof Error ? error.message : 'Error al sincronizar UID' 
+      });
+    } finally {
+      setIsSyncingUid(false);
+    }
+  };
+
+  // Create Firestore user if it doesn't exist
+  const handleCreateFirestoreUser = async () => {
+    try {
+      setIsSyncingUid(true);
+      await ensureFirestoreUser(userRecord);
+      await loadCombinedUserData();
+      setUploadMessage({ type: 'success', text: 'Usuario creado en Firestore exitosamente' });
+    } catch (error) {
+      setUploadMessage({ 
+        type: 'error', 
+        text: error instanceof Error ? error.message : 'Error al crear usuario en Firestore' 
+      });
+    } finally {
+      setIsSyncingUid(false);
+    }
+  };
+
+  // Update Firestore user data
+  const handleFirestoreUpdate = async () => {
+    if (!combinedUserData?.firestoreUser || !firestoreFormData) return;
+    
+    try {
+      setIsUpdatingFirestore(true);
+      
+      // Validate form data before updating
+      const sanitizedData = sanitizeUserFormData(firestoreFormData);
+      const validation = validateUserEditForm(sanitizedData);
+      
+      if (!validation.isValid) {
+        setValidationErrors(validation.errors);
+        setUploadMessage({ 
+          type: 'error', 
+          text: 'Por favor corrige los errores en el formulario antes de guardar' 
+        });
+        return;
+      }
+      
+      // Clear validation errors
+      setValidationErrors({});
+      
+      const result = await updateUserFromForm(userRecord.uid, validation.data!);
+      
+      if (result.success) {
+        // Reload combined data to reflect changes
+        await loadCombinedUserData();
+        setUploadMessage({ type: 'success', text: result.message });
+      } else {
+        setUploadMessage({ type: 'error', text: result.message });
+      }
+    } catch (error) {
+      setUploadMessage({ 
+        type: 'error', 
+        text: error instanceof Error ? error.message : 'Error al actualizar datos de Firestore' 
+      });
+    } finally {
+      setIsUpdatingFirestore(false);
+    }
+  };
+
+  // Handle Firestore form field changes
+  const handleFirestoreFieldChange = (field: keyof UserEditFormData, value: any) => {
+    if (!firestoreFormData) return;
+    
+    // Update form data
+    const updatedFormData = {
+      ...firestoreFormData,
+      [field]: value
+    };
+    setFirestoreFormData(updatedFormData);
+    
+    // Validate field in real-time
+    const fieldError = validateField(field, value);
+    setValidationErrors(prev => {
+      const updated = { ...prev };
+      if (fieldError) {
+        updated[field] = [fieldError];
+      } else {
+        delete updated[field];
+      }
+      return updated;
+    });
+  };
+
   // Actualizar userRecord cuando el user cambie
-  React.useEffect(() => {
-    setUserRecord(createFirebaseUserRecord(user));
+  useEffect(() => {
+    const newUserRecord = createFirebaseUserRecord(user);
+    setUserRecord(newUserRecord);
     setEditedDisplayName(user.displayName || '');
     setPreviewImage(null);
+    
+    // Load combined data when user changes
+    loadCombinedUserData();
   }, [user]);
+
+  // Initial load
+  useEffect(() => {
+    loadCombinedUserData();
+  }, []);
 
   // Función para manejar la subida de imagen
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -183,6 +366,19 @@ export default function UserProfileCard({ user, onProfileUpdate }: UserProfileCa
     return 'U';
   };
 
+  // Helper component for field errors
+  const FieldError = ({ field }: { field: string }) => {
+    const error = getFieldError(validationErrors, field);
+    if (!error) return null;
+    
+    return (
+      <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+        <AlertCircle className="h-3 w-3" />
+        {error}
+      </p>
+    );
+  };
+
   return (
     <Card className="w-full">
       <CardHeader>
@@ -214,6 +410,82 @@ export default function UserProfileCard({ user, onProfileUpdate }: UserProfileCa
       </CardHeader>
       
       <CardContent className="space-y-6">
+        {/* UID Verification Alert */}
+        {combinedUserData && !combinedUserData.uidVerification.isMatching && (
+          <Alert className="border-yellow-500 bg-yellow-50">
+            <AlertTriangle className="h-4 w-4 text-yellow-600" />
+            <AlertDescription className="text-yellow-800">
+              <div className="space-y-2">
+                <p className="font-medium">¡Advertencia de sincronización de UID!</p>
+                <p className="text-sm">{combinedUserData.uidVerification.message}</p>
+                <div className="flex items-center gap-2 text-xs">
+                  <span>Firebase Auth UID:</span>
+                  <code className="bg-yellow-100 px-1 rounded">{combinedUserData.uidVerification.firebaseAuthUid}</code>
+                </div>
+                {combinedUserData.uidVerification.firestoreUid && (
+                  <div className="flex items-center gap-2 text-xs">
+                    <span>Firestore UID:</span>
+                    <code className="bg-yellow-100 px-1 rounded">{combinedUserData.uidVerification.firestoreUid}</code>
+                  </div>
+                )}
+                <div className="flex gap-2 mt-3">
+                  {combinedUserData.firestoreUser ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={handleUidSync}
+                      disabled={isSyncingUid}
+                      className="text-yellow-700 border-yellow-300 hover:bg-yellow-100"
+                    >
+                      {isSyncingUid ? (
+                        <>
+                          <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                          Sincronizando...
+                        </>
+                      ) : (
+                        <>
+                          <RefreshCw className="h-3 w-3 mr-1" />
+                          Sincronizar UID
+                        </>
+                      )}
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={handleCreateFirestoreUser}
+                      disabled={isSyncingUid}
+                      className="text-yellow-700 border-yellow-300 hover:bg-yellow-100"
+                    >
+                      {isSyncingUid ? (
+                        <>
+                          <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                          Creando...
+                        </>
+                      ) : (
+                        <>
+                          <Database className="h-3 w-3 mr-1" />
+                          Crear en Firestore
+                        </>
+                      )}
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Loading Firestore Data */}
+        {isLoadingFirestore && (
+          <Alert>
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <AlertDescription>
+              Cargando datos de Firestore...
+            </AlertDescription>
+          </Alert>
+        )}
+
         {isEditing ? (
           <div className="space-y-6">
             {/* Mensajes de estado */}
@@ -279,10 +551,10 @@ export default function UserProfileCard({ user, onProfileUpdate }: UserProfileCa
               />
             </div>
 
-            {/* Edición de nombre */}
+            {/* Edición de nombre Firebase Auth */}
             <div className="space-y-2">
               <Label htmlFor="displayName" className="text-sm font-medium">
-                Nombre completo
+                Nombre completo (Firebase Auth)
               </Label>
               <Input
                 id="displayName"
@@ -293,24 +565,264 @@ export default function UserProfileCard({ user, onProfileUpdate }: UserProfileCa
               />
             </div>
 
+            {/* Formulario de edición de Firestore */}
+            {combinedUserData?.firestoreUser && firestoreFormData && (
+              <>
+                <Separator />
+                <div className="space-y-6">
+                  <h4 className="font-medium flex items-center gap-2">
+                    <Database className="h-4 w-4" />
+                    Información de Firestore (Editable)
+                  </h4>
+
+                  {/* Información personal de Firestore */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="firestoreDisplayName" className="text-sm font-medium">
+                        Nombre completo
+                      </Label>
+                      <Input
+                        id="firestoreDisplayName"
+                        value={firestoreFormData.displayName}
+                        onChange={(e) => handleFirestoreFieldChange('displayName', e.target.value)}
+                        placeholder="Nombre completo"
+                        className={getFieldError(validationErrors, 'displayName') ? 'border-red-500' : ''}
+                      />
+                      <FieldError field="displayName" />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="firestorePhone" className="text-sm font-medium">
+                        Teléfono
+                      </Label>
+                      <Input
+                        id="firestorePhone"
+                        value={firestoreFormData.phoneNumber}
+                        onChange={(e) => handleFirestoreFieldChange('phoneNumber', e.target.value)}
+                        placeholder="Número de teléfono"
+                        className={getFieldError(validationErrors, 'phoneNumber') ? 'border-red-500' : ''}
+                      />
+                      <FieldError field="phoneNumber" />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="firstName" className="text-sm font-medium">
+                        Nombre
+                      </Label>
+                      <Input
+                        id="firstName"
+                        value={firestoreFormData.firstName}
+                        onChange={(e) => handleFirestoreFieldChange('firstName', e.target.value)}
+                        placeholder="Nombre"
+                        className={getFieldError(validationErrors, 'firstName') ? 'border-red-500' : ''}
+                      />
+                      <FieldError field="firstName" />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="lastName" className="text-sm font-medium">
+                        Apellido
+                      </Label>
+                      <Input
+                        id="lastName"
+                        value={firestoreFormData.lastName}
+                        onChange={(e) => handleFirestoreFieldChange('lastName', e.target.value)}
+                        placeholder="Apellido"
+                        className={getFieldError(validationErrors, 'lastName') ? 'border-red-500' : ''}
+                      />
+                      <FieldError field="lastName" />
+                    </div>
+                  </div>
+
+                  {/* Información profesional */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="position" className="text-sm font-medium">
+                        Puesto
+                      </Label>
+                      <Input
+                        id="position"
+                        value={firestoreFormData.position}
+                        onChange={(e) => handleFirestoreFieldChange('position', e.target.value)}
+                        placeholder="Puesto de trabajo"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="department" className="text-sm font-medium">
+                        Departamento
+                      </Label>
+                      <Input
+                        id="department"
+                        value={firestoreFormData.department}
+                        onChange={(e) => handleFirestoreFieldChange('department', e.target.value)}
+                        placeholder="Departamento"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="location" className="text-sm font-medium">
+                        Ubicación
+                      </Label>
+                      <Input
+                        id="location"
+                        value={firestoreFormData.location}
+                        onChange={(e) => handleFirestoreFieldChange('location', e.target.value)}
+                        placeholder="Ubicación"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="language" className="text-sm font-medium">
+                        Idioma
+                      </Label>
+                      <select
+                        id="language"
+                        value={firestoreFormData.language}
+                        onChange={(e) => handleFirestoreFieldChange('language', e.target.value)}
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <option value="es">Español</option>
+                        <option value="en">English</option>
+                        <option value="fr">Français</option>
+                        <option value="pt">Português</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Biografía */}
+                  <div className="space-y-2">
+                    <Label htmlFor="bio" className="text-sm font-medium">
+                      Biografía
+                    </Label>
+                    <textarea
+                      id="bio"
+                      value={firestoreFormData.bio}
+                      onChange={(e) => handleFirestoreFieldChange('bio', e.target.value)}
+                      placeholder="Información adicional sobre ti..."
+                      rows={3}
+                      className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    />
+                  </div>
+
+                  {/* Preferencias */}
+                  <div className="space-y-4">
+                    <h5 className="font-medium text-sm">Preferencias</h5>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="theme" className="text-sm font-medium">
+                          Tema
+                        </Label>
+                        <select
+                          id="theme"
+                          value={firestoreFormData.theme}
+                          onChange={(e) => handleFirestoreFieldChange('theme', e.target.value as 'light' | 'dark' | 'system')}
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <option value="system">Sistema</option>
+                          <option value="light">Claro</option>
+                          <option value="dark">Oscuro</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Notificaciones */}
+                    <div className="space-y-3">
+                      <Label className="text-sm font-medium">Notificaciones</Label>
+                      <div className="space-y-2">
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            id="notificationEmail"
+                            checked={firestoreFormData.notificationEmail}
+                            onChange={(e) => handleFirestoreFieldChange('notificationEmail', e.target.checked)}
+                            className="h-4 w-4 rounded border border-input bg-background"
+                          />
+                          <Label htmlFor="notificationEmail" className="text-sm">
+                            Notificaciones por email
+                          </Label>
+                        </div>
+                        
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            id="notificationPush"
+                            checked={firestoreFormData.notificationPush}
+                            onChange={(e) => handleFirestoreFieldChange('notificationPush', e.target.checked)}
+                            className="h-4 w-4 rounded border border-input bg-background"
+                          />
+                          <Label htmlFor="notificationPush" className="text-sm">
+                            Notificaciones push
+                          </Label>
+                        </div>
+                        
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            id="notificationSms"
+                            checked={firestoreFormData.notificationSms}
+                            onChange={(e) => handleFirestoreFieldChange('notificationSms', e.target.checked)}
+                            className="h-4 w-4 rounded border border-input bg-background"
+                          />
+                          <Label htmlFor="notificationSms" className="text-sm">
+                            Notificaciones SMS
+                          </Label>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+
             {/* Botones de acción */}
             <div className="flex justify-start space-x-3 pt-4">
               <Button 
                 onClick={handleProfileUpdate}
-                disabled={isUpdating || isUploadingImage}
+                disabled={isUpdating || isUploadingImage || isUpdatingFirestore}
               >
                 {isUpdating ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Guardando...
+                    Guardando Firebase Auth...
                   </>
                 ) : (
                   <>
                     <Upload className="mr-2 h-4 w-4" />
-                    Guardar cambios
+                    Guardar Firebase Auth
                   </>
                 )}
               </Button>
+              
+              {combinedUserData?.firestoreUser && firestoreFormData && (
+                <Button 
+                  onClick={handleFirestoreUpdate}
+                  disabled={
+                    isUpdating || 
+                    isUploadingImage || 
+                    isUpdatingFirestore || 
+                    hasFormErrors(validationErrors)
+                  }
+                  variant="secondary"
+                >
+                  {isUpdatingFirestore ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Guardando Firestore...
+                    </>
+                  ) : (
+                    <>
+                      <Database className="mr-2 h-4 w-4" />
+                      Guardar Firestore
+                      {hasFormErrors(validationErrors) && (
+                        <AlertCircle className="ml-1 h-3 w-3 text-red-500" />
+                      )}
+                    </>
+                  )}
+                </Button>
+              )}
+              
               <Button
                 type="button"
                 variant="outline"
@@ -319,8 +831,14 @@ export default function UserProfileCard({ user, onProfileUpdate }: UserProfileCa
                   setEditedDisplayName(user.displayName || '');
                   setPreviewImage(null);
                   setUploadMessage(null);
+                  setValidationErrors({});
+                  // Reset Firestore form data
+                  if (combinedUserData?.firestoreUser) {
+                    const formData = createUserEditFormData(combinedUserData.firestoreUser);
+                    setFirestoreFormData(formData);
+                  }
                 }}
-                disabled={isUpdating || isUploadingImage}
+                disabled={isUpdating || isUploadingImage || isUpdatingFirestore}
               >
                 Cancelar
               </Button>
@@ -639,24 +1157,223 @@ export default function UserProfileCard({ user, onProfileUpdate }: UserProfileCa
               </>
             )}
 
+            {/* Contexto Organizacional Actual */}
+            {(currentOrganization || currentTenant) && (
+              <>
+                <Separator />
+                <div className="space-y-4">
+                  <h4 className="font-medium flex items-center gap-2">
+                    <Building2 className="h-4 w-4" />
+                    Contexto Actual
+                  </h4>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Organización Actual */}
+                    {currentOrganization && (
+                      <div className="space-y-3">
+                        <h5 className="font-medium text-sm">Organización Activa</h5>
+                        <div className="p-4 bg-muted/50 rounded-lg border">
+                          <div className="flex items-start gap-3">
+                            <Avatar className="h-10 w-10">
+                              <AvatarFallback>
+                                {currentOrganization.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium">{currentOrganization.name}</p>
+                              <p className="text-sm text-muted-foreground">{currentOrganization.description}</p>
+                              <div className="flex items-center gap-2 mt-2">
+                                <Badge variant="outline" className="text-xs">
+                                  {currentOrganization.memberIds.length} miembros
+                                </Badge>
+                                <Badge variant="outline" className="text-xs">
+                                  {currentOrganization.stats.totalLeads} leads
+                                </Badge>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Tenant Actual */}
+                    {currentTenant && (
+                      <div className="space-y-3">
+                        <h5 className="font-medium text-sm">Empresa Activa</h5>
+                        <div className="p-4 bg-muted/50 rounded-lg border">
+                          <div className="space-y-2">
+                            <p className="font-medium">{currentTenant.companyInfo.name}</p>
+                            <p className="text-sm text-muted-foreground">{currentTenant.companyInfo.description}</p>
+                            <div className="flex items-center gap-2">
+                              <Badge variant="default" className="text-xs">
+                                {currentTenant.planType}
+                              </Badge>
+                              <Badge variant="outline" className="text-xs">
+                                {currentTenant.companyInfo.industry}
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Selector de Organización */}
+                  {availableOrganizations.length > 1 && (
+                    <div className="space-y-3">
+                      <h5 className="font-medium text-sm">Cambiar Organización</h5>
+                      <OrganizationSwitcher className="w-full max-w-md" />
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
+            {/* Información de Firestore */}
+            {combinedUserData?.firestoreUser && (
+              <>
+                <Separator />
+                <div className="space-y-4">
+                  <h4 className="font-medium flex items-center gap-2">
+                    <Database className="h-4 w-4" />
+                    Información de Firestore
+                  </h4>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {/* Contexto Organizacional */}
+                    <div className="space-y-4">
+                      <h5 className="font-medium text-sm">Contexto Organizacional</h5>
+                      <div className="space-y-3 text-sm">
+                        <div className="flex flex-col gap-1">
+                          <span className="text-muted-foreground">Tenant Actual:</span>
+                          <span className="text-xs font-mono bg-muted px-2 py-1 rounded">
+                            {combinedUserData.firestoreUser.currentTenantId || 'No asignado'}
+                          </span>
+                        </div>
+                        
+                        <div className="flex flex-col gap-1">
+                          <span className="text-muted-foreground">Organización Actual:</span>
+                          <span className="text-xs font-mono bg-muted px-2 py-1 rounded">
+                            {combinedUserData.firestoreUser.currentOrganizationId || 'No asignado'}
+                          </span>
+                        </div>
+                        
+                        <div className="flex justify-between items-center">
+                          <span className="text-muted-foreground">Total Organizaciones:</span>
+                          <Badge variant="outline">
+                            {combinedUserData.firestoreUser.totalOrganizations}
+                          </Badge>
+                        </div>
+                        
+                        <div className="flex justify-between items-center">
+                          <span className="text-muted-foreground">Total Tenants:</span>
+                          <Badge variant="outline">
+                            {combinedUserData.firestoreUser.totalTenants}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Roles y Permisos */}
+                    <div className="space-y-4">
+                      <h5 className="font-medium text-sm">Roles y Estado</h5>
+                      <div className="space-y-3 text-sm">
+                        <div className="flex justify-between items-center">
+                          <span className="text-muted-foreground">Rol:</span>
+                          <Badge variant="default">
+                            {combinedUserData.firestoreUser.role}
+                          </Badge>
+                        </div>
+                        
+                        <div className="flex justify-between items-center">
+                          <span className="text-muted-foreground">Rol del Sistema:</span>
+                          <Badge variant={combinedUserData.firestoreUser.systemRole === 'admin' ? 'destructive' : 'secondary'}>
+                            {combinedUserData.firestoreUser.systemRole}
+                          </Badge>
+                        </div>
+                        
+                        <div className="flex justify-between items-center">
+                          <span className="text-muted-foreground">Perfil Completo:</span>
+                          <Badge variant={combinedUserData.firestoreUser.profileCompleted ? 'default' : 'secondary'}>
+                            {combinedUserData.firestoreUser.profileCompleted ? 'Sí' : 'No'}
+                          </Badge>
+                        </div>
+                        
+                        <div className="flex justify-between items-center">
+                          <span className="text-muted-foreground">En Línea:</span>
+                          <Badge variant={combinedUserData.firestoreUser.isOnline ? 'default' : 'secondary'}>
+                            {combinedUserData.firestoreUser.isOnline ? 'Sí' : 'No'}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Actividad */}
+                    <div className="space-y-4">
+                      <h5 className="font-medium text-sm">Actividad</h5>
+                      <div className="space-y-3 text-sm">
+                        <div className="flex flex-col gap-1">
+                          <span className="text-muted-foreground">Última Actividad:</span>
+                          <span className="text-xs">
+                            {safeFormatDate(combinedUserData.firestoreUser.lastActivity)}
+                          </span>
+                        </div>
+                        
+                        {combinedUserData.firestoreUser.lastLoginAt && (
+                          <div className="flex flex-col gap-1">
+                            <span className="text-muted-foreground">Último Login:</span>
+                            <span className="text-xs">
+                              {safeFormatDate(combinedUserData.firestoreUser.lastLoginAt)}
+                            </span>
+                          </div>
+                        )}
+                        
+                        <div className="flex justify-between items-center">
+                          <span className="text-muted-foreground">Logins Totales:</span>
+                          <Badge variant="outline">
+                            {combinedUserData.firestoreUser.loginCount}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+
             {/* Resumen de Datos Completos */}
             <Separator />
             <div className="space-y-4">
               <h4 className="font-medium flex items-center gap-2">
                 <Settings className="h-4 w-4" />
-                Objeto Firebase Completo
+                Datos Completos
               </h4>
               
-              <details>
-                <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground">
-                  Ver datos JSON completos del usuario
-                </summary>
-                <div className="bg-muted/50 p-4 rounded-lg mt-3 max-h-96 overflow-y-auto">
-                  <pre className="text-xs overflow-x-auto">
-                    {JSON.stringify(userRecord, null, 2)}
-                  </pre>
-                </div>
-              </details>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <details>
+                  <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground">
+                    Ver datos Firebase Auth completos
+                  </summary>
+                  <div className="bg-muted/50 p-4 rounded-lg mt-3 max-h-96 overflow-y-auto">
+                    <pre className="text-xs overflow-x-auto">
+                      {JSON.stringify(userRecord, null, 2)}
+                    </pre>
+                  </div>
+                </details>
+                
+                {combinedUserData?.firestoreUser && (
+                  <details>
+                    <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground">
+                      Ver datos Firestore completos
+                    </summary>
+                    <div className="bg-muted/50 p-4 rounded-lg mt-3 max-h-96 overflow-y-auto">
+                      <pre className="text-xs overflow-x-auto">
+                        {JSON.stringify(combinedUserData.firestoreUser, null, 2)}
+                      </pre>
+                    </div>
+                  </details>
+                )}
+              </div>
             </div>
           </>
         )}
