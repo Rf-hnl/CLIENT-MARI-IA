@@ -1,7 +1,6 @@
 'use client';
 
 import { IWhatsAppRecord, IFirebaseTimestamp } from '@/modules/clients/types/clients'; // Import IFirebaseTimestamp
-// Mock data removed - TODO: Replace with real Firebase data
 import { safeFormatDate } from '@/utils/dateFormat';
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -9,6 +8,8 @@ import { useState, useMemo, useEffect } from 'react'; // Import useMemo, useEffe
 import { ThumbsUp, ThumbsDown, Copy, Share2, RefreshCcw } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useClients } from '@/modules/clients/hooks/useClients'; // Import useClients hook
+import MCPConfirmationModal from './MCPConfirmationModal';
 
 interface WhatsAppHistoryProps {
   clientId: string;
@@ -18,19 +19,47 @@ interface WhatsAppHistoryProps {
 export const WhatsAppHistory = ({ clientId, filterDays }: WhatsAppHistoryProps) => {
   const [selectedAction, setSelectedAction] = useState('');
   const [whatsappRecords, setWhatsappRecords] = useState<IWhatsAppRecord[]>([]); // State to hold fetched data
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [isExecuting, setIsExecuting] = useState(false);
+  const { currentTenant, currentOrganization, clients } = useClients(); // Get real tenant/org data and clients
+  
+  // Get current client data
+  const currentClient = clients.find(c => c.id === clientId);
 
   useEffect(() => {
-    // Placeholder for fetching real data
     const fetchWhatsAppHistory = async () => {
-      try {
-        // In a real application, you would fetch data from your API
-        // const response = await fetch(`/api/clients/${clientId}/whatsapp-history?filterDays=${filterDays}`);
-        // const data = await response.json();
-        // setWhatsappRecords(data);
+      // Don't fetch if we don't have tenant/org data yet
+      if (!currentTenant || !currentOrganization) {
+        console.log('⏳ Waiting for tenant/organization data...');
+        return;
+      }
 
-        // TODO: Replace with real Firebase API call
-        // For now, set empty array
-        setWhatsappRecords([]);
+      try {
+        console.log(`📱 Fetching WhatsApp history for client: ${clientId}`);
+        console.log(`🏢 Using tenant: ${currentTenant.id}, org: ${currentOrganization.id}`);
+        
+        const response = await fetch('/api/client/whatsapp/get', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            clientId,
+            tenantId: currentTenant.id, // Use real tenant ID
+            organizationId: currentOrganization.id, // Use real organization ID
+            days: filterDays || 7
+          })
+        });
+
+        const result = await response.json();
+        
+        if (result.success) {
+          setWhatsappRecords(result.data);
+          console.log(`📱 Loaded ${result.count} WhatsApp messages from ${result.source}`);
+        } else {
+          console.error('Error from API:', result.error);
+          setWhatsappRecords([]);
+        }
 
       } catch (error) {
         console.error('Error fetching WhatsApp history:', error);
@@ -39,7 +68,7 @@ export const WhatsAppHistory = ({ clientId, filterDays }: WhatsAppHistoryProps) 
     };
 
     fetchWhatsAppHistory();
-  }, [clientId]); // Re-fetch when clientId changes
+  }, [clientId, filterDays, currentTenant, currentOrganization]); // Re-fetch when any dependency changes
 
   const filteredRecords = useMemo(() => {
     const now = new Date();
@@ -59,11 +88,57 @@ export const WhatsAppHistory = ({ clientId, filterDays }: WhatsAppHistoryProps) 
   }, [clientId, filterDays, whatsappRecords]); // Depend on whatsappRecords
 
   const handleExecuteAction = () => {
-    if (selectedAction) {
-      // In a real application, you would send this action to the agentmcp
-      console.log('Executing action:', selectedAction);
-      setSelectedAction(''); // Clear selection after execution
+    if (selectedAction && currentClient) {
+      setShowConfirmModal(true);
     }
+  };
+
+  const handleConfirmExecution = async () => {
+    if (!selectedAction || !currentTenant || !currentOrganization || !currentClient) return;
+
+    setIsExecuting(true);
+    try {
+      console.log('🎯 Executing action:', selectedAction);
+      console.log(`🏢 Using tenant: ${currentTenant.id}, org: ${currentOrganization.id}`);
+      
+      // Start WhatsApp conversation via MCP
+      const response = await fetch('/api/client/whatsapp/start-conversation', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          clientId,
+          tenantId: currentTenant.id,
+          organizationId: currentOrganization.id,
+          action: selectedAction
+        })
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        console.log('✅ Action executed successfully:', result.conversationId);
+        setShowConfirmModal(false);
+        setSelectedAction('');
+        // Refresh WhatsApp history after starting conversation
+        window.location.reload();
+      } else {
+        console.error('❌ Error executing action:', result.error);
+        alert('Error al ejecutar la acción: ' + result.error);
+      }
+      
+    } catch (error) {
+      console.error('❌ Error executing action:', error);
+      alert('Error al ejecutar la acción');
+    } finally {
+      setIsExecuting(false);
+    }
+  };
+
+  const handleCancelExecution = () => {
+    setShowConfirmModal(false);
+    setSelectedAction('');
   };
 
   return (
@@ -196,6 +271,15 @@ export const WhatsAppHistory = ({ clientId, filterDays }: WhatsAppHistoryProps) 
           <Button onClick={handleExecuteAction} disabled={!selectedAction}>Ejecutar Acción</Button>
         </div>
       </div>
+
+      <MCPConfirmationModal
+        isOpen={showConfirmModal}
+        onClose={handleCancelExecution}
+        onConfirm={handleConfirmExecution}
+        client={currentClient}
+        selectedAction={selectedAction}
+        isLoading={isExecuting}
+      />
     </TooltipProvider>
   );
 };

@@ -1,25 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirestore, doc, getDoc } from 'firebase/firestore';
-import { IWhatsAppRecord, IClientDocument } from '@/modules/clients/types/clients';
+import { IWhatsAppRecord, IClientDocument, IClient } from '@/modules/clients/types/clients';
 import firebaseApp from '@/lib/firebase/client';
+import { getWhatsAppConversations, transformMCPToWhatsAppRecord } from '@/lib/services/mcpWhatsApp';
 
 const db = getFirestore(firebaseApp);
 
 /**
- * API ENDPOINT - WhatsApp History
+ * API ENDPOINT - WhatsApp History with MCP Integration
  * 
- * Obtiene el historial de mensajes de WhatsApp desde customerInteractions del cliente
+ * Obtiene el historial de mensajes de WhatsApp desde MCP service
  * 
  * @param clientId - ID del cliente
  * @param tenantId - ID del tenant
  * @param organizationId - ID de la organización
- * 
- * NOTA: Los datos reales vienen de servicios MCP externos, aquí solo se obtienen los IDs almacenados
+ * @param days - Número de días a filtrar (opcional, default: 7)
  */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { clientId, tenantId, organizationId } = body;
+    const { clientId, tenantId, organizationId, days = 7 } = body;
 
     // Validar parámetros requeridos
     if (!clientId || !tenantId || !organizationId) {
@@ -47,23 +47,49 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const clientData = clientDoc.data() as IClientDocument;
-    const whatsappRecords = clientData.customerInteractions?.whatsAppRecords || [];
+    const clientData = clientDoc.data();
+    
+    // Los datos del cliente están directamente en el documento, no en _data
+    const client = { id: clientId, ...clientData } as IClient;
 
-    console.log(`📱 WhatsApp History requested for client: ${clientId}`);
-    console.log(`📊 Found ${whatsappRecords.length} WhatsApp records (IDs only)`);
+    console.log(`📱 WhatsApp History requested for client: ${clientId} (${days} days)`);
 
-    // TODO: Aquí se llamarían los servicios MCP externos para obtener los datos completos
-    // usando los IDs almacenados en whatsappRecords
+    try {
+      // Obtener conversaciones desde MCP service
+      const mcpResponse = await getWhatsAppConversations(clientId, days);
+      
+      // Transformar datos MCP a formato IWhatsAppRecord
+      const whatsappRecords: IWhatsAppRecord[] = mcpResponse.conversations.map(mcpMessage => 
+        transformMCPToWhatsAppRecord(mcpMessage, clientId)
+      );
 
-    return NextResponse.json({
-      success: true,
-      data: whatsappRecords,
-      path: clientPath,
-      message: 'WhatsApp history retrieved successfully',
-      count: whatsappRecords.length,
-      note: 'Los datos reales se obtienen vía MCP - aquí solo se muestran los IDs almacenados'
-    });
+      console.log(`📊 Retrieved ${whatsappRecords.length} WhatsApp messages from MCP`);
+
+      return NextResponse.json({
+        success: true,
+        data: whatsappRecords,
+        path: clientPath,
+        message: 'WhatsApp history retrieved successfully from MCP',
+        count: whatsappRecords.length,
+        totalMessages: mcpResponse.total_messages,
+        periodDays: mcpResponse.period_days,
+        source: 'MCP WhatsApp Service'
+      });
+
+    } catch (mcpError) {
+      // Si MCP falla, mostrar mensaje apropiado ya que no hay datos de WhatsApp en Firebase
+      console.warn('⚠️ MCP service unavailable:', mcpError);
+      
+      return NextResponse.json({
+        success: true,
+        data: [], // No hay datos de WhatsApp almacenados en Firebase
+        path: clientPath,
+        message: 'MCP service unavailable - no WhatsApp data stored in Firebase',
+        count: 0,
+        source: 'Firebase Fallback',
+        warning: 'MCP service unavailable and no local WhatsApp data found'
+      });
+    }
 
   } catch (error) {
     console.error('❌ Error fetching WhatsApp history:', error);
