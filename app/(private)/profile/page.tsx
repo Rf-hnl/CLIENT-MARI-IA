@@ -1,17 +1,21 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '@/modules/auth';
 import { useRouter } from 'next/navigation';
-import ProfileForm from '@/components/profile/ProfileForm';
+import UserProfileCard from '@/components/profile/UserProfileCard';
+import QuickActions from '@/components/profile/QuickActions';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, User, Shield, Info } from 'lucide-react';
+import { ArrowLeft, User } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { CheckCircle, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ProfileUpdateResult } from '@/types/firebaseUser';
 
 export default function ProfilePage() {
   const { currentUser, loading } = useAuth();
   const router = useRouter();
+  const [updateResult, setUpdateResult] = useState<ProfileUpdateResult | null>(null);
 
   useEffect(() => {
     if (loading) return;
@@ -68,74 +72,36 @@ export default function ProfilePage() {
       </div>
 
       {/* Main Content */}
-      <div className="space-y-6">
-        <div>
-          <h2 className="text-lg font-semibold tracking-tight mb-2">
-            Configuración de Perfil
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            Administra tu información personal y configuraciones de cuenta.
-          </p>
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Profile Card - Main Content */}
+        <div className="lg:col-span-3">
+          {updateResult && (
+            <Alert className={`mb-6 ${updateResult.success ? 'border-green-500' : 'border-red-500'}`}>
+              {updateResult.success ? (
+                <CheckCircle className="h-4 w-4" />
+              ) : (
+                <AlertCircle className="h-4 w-4" />
+              )}
+              <AlertDescription className={updateResult.success ? 'text-green-600' : 'text-red-600'}>
+                {updateResult.message}
+              </AlertDescription>
+            </Alert>
+          )}
+          
+          <UserProfileCard 
+            user={currentUser} 
+            onProfileUpdate={(result) => {
+              setUpdateResult(result);
+              // Auto-ocultar el mensaje después de 5 segundos
+              setTimeout(() => setUpdateResult(null), 5000);
+            }}
+          />
         </div>
 
-        <Card>
-          <CardContent className="p-6">
-            <ProfileForm 
-              onProfileUpdated={(updatedProfile) => {
-                console.log('Perfil actualizado:', updatedProfile);
-              }}
-            />
-          </CardContent>
-        </Card>
-
-        {/* Security Information */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Shield className="h-5 w-5" />
-              Información de Seguridad
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="flex items-start gap-2">
-              <Info className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-              <span className="text-sm text-muted-foreground">Tu foto de perfil se almacena de forma segura en Cloudinary</span>
-            </div>
-            <div className="flex items-start gap-2">
-              <Info className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-              <span className="text-sm text-muted-foreground">Los cambios en tu perfil se sincronizan automáticamente con Firebase</span>
-            </div>
-            <div className="flex items-start gap-2">
-              <Info className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-              <span className="text-sm text-muted-foreground">Tu correo electrónico no puede ser modificado por seguridad</span>
-            </div>
-            <div className="flex items-start gap-2">
-              <Info className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-              <span className="text-sm text-muted-foreground">Todos los cambios quedan registrados en tu historial de cuenta</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Account Management Actions */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Acciones de Cuenta</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Link href="/forgot-password">
-                <Button variant="outline" className="w-full sm:w-auto">
-                  Cambiar Contraseña
-                </Button>
-              </Link>
-              <Link href="/dashboard">
-                <Button variant="outline" className="w-full sm:w-auto">
-                  Ver Dashboard
-                </Button>
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Quick Actions - Side Panel */}
+        <div className="lg:col-span-1">
+          <QuickActions />
+        </div>
       </div>
     </div>
   );

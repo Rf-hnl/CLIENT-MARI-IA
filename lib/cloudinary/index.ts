@@ -1,9 +1,4 @@
-import { CloudinaryUploadResult, CloudinaryError } from '@/types/authProfile';
-
-export interface CloudinaryConfig {
-  cloudName: string;
-  uploadPreset: string;
-}
+import { CloudinaryUploadResult, CloudinaryError, CloudinaryConfig } from '@/types/cloudinary';
 
 export const getCloudinaryConfig = (): CloudinaryConfig => {
   const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;

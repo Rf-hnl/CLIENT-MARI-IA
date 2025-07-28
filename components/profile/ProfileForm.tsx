@@ -19,7 +19,7 @@ import {
   ProfileFormData, 
   createUserProfileFromFirebaseUser,
   createFormDataFromProfile 
-} from '@/types/authProfile';
+} from '@/types/firebaseUser';
 import { Camera, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
 
 const profileSchema = z.object({
@@ -133,136 +133,113 @@ export default function ProfileForm({ onProfileUpdated }: ProfileFormProps) {
   }
 
   return (
-    <Card className="w-full max-w-2xl mx-auto">
-      <CardHeader>
-        <CardTitle className="text-2xl font-bold text-center">Gestión de Perfil</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {message && (
-          <Alert className={message.type === 'error' ? 'border-red-500' : 'border-green-500'}>
-            {message.type === 'error' ? (
-              <AlertCircle className="h-4 w-4" />
-            ) : (
-              <CheckCircle2 className="h-4 w-4" />
-            )}
-            <AlertDescription className={message.type === 'error' ? 'text-red-600' : 'text-green-600'}>
-              {message.text}
-            </AlertDescription>
-          </Alert>
-        )}
+    <div className="space-y-6">
+      {message && (
+        <Alert className={message.type === 'error' ? 'border-red-500' : 'border-green-500'}>
+          {message.type === 'error' ? (
+            <AlertCircle className="h-4 w-4" />
+          ) : (
+            <CheckCircle2 className="h-4 w-4" />
+          )}
+          <AlertDescription className={message.type === 'error' ? 'text-red-600' : 'text-green-600'}>
+            {message.text}
+          </AlertDescription>
+        </Alert>
+      )}
 
-        <div className="flex flex-col items-center space-y-4">
-          <div className="relative">
-            <Avatar className="h-24 w-24">
-              <AvatarImage src={currentPhotoURL || undefined} alt={displayName} />
-              <AvatarFallback className="text-lg">{initials}</AvatarFallback>
-            </Avatar>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          {/* Photo Upload Section */}
+          <div className="space-y-4">
+            <Label className="text-sm font-medium">Foto de Perfil</Label>
+            <div className="flex items-center space-x-4">
+              <div className="relative">
+                <Avatar className="h-16 w-16">
+                  <AvatarImage src={currentPhotoURL || undefined} alt={displayName} />
+                  <AvatarFallback className="text-sm">{initials}</AvatarFallback>
+                </Avatar>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="absolute -bottom-1 -right-1 rounded-full h-8 w-8"
+                  onClick={triggerFileInput}
+                  disabled={isUploading}
+                >
+                  {isUploading ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <Camera className="h-3 w-3" />
+                  )}
+                </Button>
+              </div>
+              <div className="flex-1">
+                <p className="text-sm text-muted-foreground">
+                  Haz clic en el ícono de cámara para cambiar tu foto
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  JPG, PNG o GIF. Máximo 5MB.
+                </p>
+              </div>
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleImageUpload}
+              className="hidden"
+            />
+          </div>
+
+          {/* Name Field */}
+          <FormField
+            control={form.control}
+            name="displayName"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Nombre completo</FormLabel>
+                <FormControl>
+                  <Input 
+                    placeholder="Ingresa tu nombre completo" 
+                    {...field} 
+                    className="max-w-md"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {/* Action Buttons */}
+          <div className="flex justify-start space-x-3 pt-4">
+            <Button 
+              type="submit" 
+              disabled={isSaving || isUploading || !form.formState.isDirty}
+            >
+              {isSaving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Guardando...
+                </>
+              ) : (
+                'Guardar cambios'
+              )}
+            </Button>
             <Button
               type="button"
               variant="outline"
-              size="icon"
-              className="absolute -bottom-2 -right-2 rounded-full"
-              onClick={triggerFileInput}
-              disabled={isUploading}
+              onClick={() => {
+                form.reset();
+                setPreviewImage(null);
+                setMessage(null);
+              }}
+              disabled={isSaving || isUploading}
             >
-              {isUploading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Camera className="h-4 w-4" />
-              )}
+              Cancelar
             </Button>
           </div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handleImageUpload}
-            className="hidden"
-          />
-          <p className="text-sm text-muted-foreground text-center">
-            Haz clic en el ícono de cámara para cambiar tu foto de perfil
-          </p>
-        </div>
-
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="displayName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nombre completo</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Tu nombre completo" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <div className="space-y-2">
-                <Label>Correo electrónico</Label>
-                <Input
-                  value={userProfile.email || 'No disponible'}
-                  disabled
-                  className="bg-muted"
-                />
-                <p className="text-xs text-muted-foreground">
-                  El correo electrónico no se puede modificar
-                </p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-              <div>
-                <Label className="text-xs text-muted-foreground">Estado de verificación</Label>
-                <div className="flex items-center space-x-2 mt-1">
-                  <div className={`w-2 h-2 rounded-full ${userProfile.emailVerified ? 'bg-green-500' : 'bg-yellow-500'}`} />
-                  <span>{userProfile.emailVerified ? 'Verificado' : 'Pendiente de verificación'}</span>
-                </div>
-              </div>
-              <div>
-                <Label className="text-xs text-muted-foreground">Miembro desde</Label>
-                <p className="mt-1">
-                  {userProfile.creationTime 
-                    ? new Date(userProfile.creationTime).toLocaleDateString('es-ES')
-                    : 'No disponible'
-                  }
-                </p>
-              </div>
-            </div>
-
-            <div className="flex justify-end space-x-2 pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  form.reset();
-                  setPreviewImage(null);
-                  setMessage(null);
-                }}
-                disabled={isSaving || isUploading}
-              >
-                Cancelar
-              </Button>
-              <Button 
-                type="submit" 
-                disabled={isSaving || isUploading || !form.formState.isDirty}
-              >
-                {isSaving ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Guardando...
-                  </>
-                ) : (
-                  'Guardar cambios'
-                )}
-              </Button>
-            </div>
-          </form>
-        </Form>
-      </CardContent>
-    </Card>
+        </form>
+      </Form>
+    </div>
   );
 }
