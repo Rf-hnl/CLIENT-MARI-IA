@@ -58,8 +58,24 @@ export async function POST(request: NextRequest) {
       // Obtener conversaciones desde MCP service
       const mcpResponse = await getWhatsAppConversations(clientId, days);
       
+      
+      // Validar que la respuesta tenga messages
+      if (!mcpResponse || !mcpResponse.messages || !Array.isArray(mcpResponse.messages)) {
+        console.warn('⚠️ MCP Response missing messages array:', mcpResponse);
+        return NextResponse.json({
+          success: true,
+          data: [],
+          path: clientPath,
+          message: 'No messages found in MCP response',
+          count: 0,
+          totalMessages: 0,
+          periodDays: days,
+          source: 'MCP WhatsApp Service'
+        });
+      }
+      
       // Transformar datos MCP a formato IWhatsAppRecord
-      const whatsappRecords: IWhatsAppRecord[] = mcpResponse.conversations.map(mcpMessage => 
+      const whatsappRecords: IWhatsAppRecord[] = mcpResponse.messages.map(mcpMessage => 
         transformMCPToWhatsAppRecord(mcpMessage, clientId)
       );
 
@@ -71,28 +87,27 @@ export async function POST(request: NextRequest) {
         path: clientPath,
         message: 'WhatsApp history retrieved successfully from MCP',
         count: whatsappRecords.length,
-        totalMessages: mcpResponse.total_messages,
-        periodDays: mcpResponse.period_days,
+        totalMessages: mcpResponse.message_count,
+        periodDays: mcpResponse.days,
         source: 'MCP WhatsApp Service'
       });
 
     } catch (mcpError) {
-      // Si MCP falla, mostrar mensaje apropiado ya que no hay datos de WhatsApp en Firebase
-      console.warn('⚠️ MCP service unavailable:', mcpError);
+      // Si MCP falla, loguear el error y retornar un mensaje de error apropiado
+      console.error('❌ Error fetching WhatsApp conversations from MCP:', mcpError);
       
-      return NextResponse.json({
-        success: true,
-        data: [], // No hay datos de WhatsApp almacenados en Firebase
-        path: clientPath,
-        message: 'MCP service unavailable - no WhatsApp data stored in Firebase',
-        count: 0,
-        source: 'Firebase Fallback',
-        warning: 'MCP service unavailable and no local WhatsApp data found'
-      });
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: `Failed to retrieve WhatsApp history from MCP: ${mcpError instanceof Error ? mcpError.message : 'Unknown error'}`,
+          details: 'Error al obtener historial de WhatsApp del servicio MCP'
+        },
+        { status: 500 }
+      );
     }
 
   } catch (error) {
-    console.error('❌ Error fetching WhatsApp history:', error);
+    console.error('❌ Error fetching WhatsApp history in endpoint:', error);
     
     return NextResponse.json(
       { 

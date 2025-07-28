@@ -10,20 +10,17 @@ import { IClient } from '@/modules/clients/types/clients';
 const MCP_BASE_URL = 'https://cobros.maiz.studio';
 
 export interface MCPConversationMessage {
-  id: string;
-  timestamp: string;
   direction: 'inbound' | 'outbound';
-  message: string;
-  sender_name?: string;
+  content: string;
+  created_at: string;
   message_type: 'text' | 'media' | 'template';
-  attachments?: string[];
 }
 
 export interface MCPConversationResponse {
-  clientId: string;
-  conversations: MCPConversationMessage[];
-  total_messages: number;
-  period_days: number;
+  user_id: string;
+  days: number;
+  message_count: number;
+  messages: MCPConversationMessage[];
 }
 
 export interface MCPStartConversationResponse {
@@ -203,7 +200,8 @@ export async function getWhatsAppConversations(
   days: number = 7
 ): Promise<MCPConversationResponse> {
   try {
-    const response = await fetch(`${MCP_BASE_URL}/users/${clientId}/conversations?days=${days}`, {
+    const url = `${MCP_BASE_URL}/users/${clientId}/conversations?days=${days}`;
+    const response = await fetch(url, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -211,7 +209,8 @@ export async function getWhatsAppConversations(
     });
 
     if (!response.ok) {
-      throw new Error(`MCP API error: ${response.status} ${response.statusText}`);
+      const errorText = await response.text();
+      throw new Error(`MCP API error: ${response.status} ${response.statusText}. Body: ${errorText}`);
     }
 
     return await response.json();
@@ -225,20 +224,23 @@ export async function getWhatsAppConversations(
  * Transform MCP conversation data to IWhatsAppRecord format
  */
 export function transformMCPToWhatsAppRecord(mcpMessage: MCPConversationMessage, clientId: string) {
+  // Generate a unique ID based on timestamp and content
+  const messageId = `${new Date(mcpMessage.created_at).getTime()}_${mcpMessage.content.substring(0, 10)}`;
+  
   return {
-    id: mcpMessage.id,
+    id: messageId,
     clientId: clientId,
     timestamp: {
-      _seconds: Math.floor(new Date(mcpMessage.timestamp).getTime() / 1000),
+      _seconds: Math.floor(new Date(mcpMessage.created_at).getTime() / 1000),
       _nanoseconds: 0
     },
     messageDirection: mcpMessage.direction,
     agentId: mcpMessage.direction === 'outbound' ? 'mcp-agent' : undefined,
-    messageContent: mcpMessage.message,
-    attachments: mcpMessage.attachments || [],
+    messageContent: mcpMessage.content,
+    attachments: [],
     interactionType: mcpMessage.message_type,
     isBotConversation: true,
-    botSessionId: mcpMessage.id,
+    botSessionId: messageId,
     requiresHumanHandoff: false
   };
 }

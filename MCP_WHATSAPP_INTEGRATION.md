@@ -80,25 +80,24 @@ graph TD
 
 ### MCP Response → IWhatsAppRecord
 ```typescript
-// Entrada (MCP)
+// Entrada (MCP) - Estructura real de la API
 {
-  id: "msg123",
-  timestamp: "2024-01-15T10:30:00Z",
   direction: "inbound",
-  message: "Hola, necesito información sobre mi préstamo",
+  content: "Hola, necesito información sobre mi préstamo",
+  created_at: "2025-07-25T13:51:04.372330+00:00",
   message_type: "text"
 }
 
 // Salida (IWhatsAppRecord)
 {
-  id: "msg123",
+  id: "1721917864372_Hola, nece",
   clientId: "client123",
-  timestamp: { _seconds: 1705312200, _nanoseconds: 0 },
+  timestamp: { _seconds: 1721917864, _nanoseconds: 0 },
   messageDirection: "inbound",
   messageContent: "Hola, necesito información sobre mi préstamo",
   interactionType: "text",
   isBotConversation: true,
-  botSessionId: "msg123"
+  botSessionId: "1721917864372_Hola, nece"
 }
 ```
 
@@ -187,6 +186,39 @@ graph TD
 2. **Refresh después de acción**: Implementado con `window.location.reload()` - podría optimizarse con revalidación de datos.
 
 3. **Error Handling**: Sistema robusto implementado con fallback a Firebase si MCP no está disponible.
+
+### 🔄 Cambios en el Modelo de Datos (2025-07-28)
+
+**IMPORTANTE**: Se eliminó `whatsAppRecords` del modelo `ICustomerInteractions` ya que:
+
+1. **WhatsApp usa MCP como fuente única**: Los datos de WhatsApp se obtienen directamente desde MCP, no se almacenan en Firebase
+2. **Consistencia arquitectónica**: Otros endpoints (calls, emails, ai-analysis) usan `customerInteractions` porque los datos están en Firebase
+3. **Separación de responsabilidades**: 
+   - Firebase: Datos persistentes (calls, emails, AI analysis)
+   - MCP: Datos en tiempo real (WhatsApp conversations)
+
+**Antes**:
+```typescript
+export interface ICustomerInteractions {
+  callLogs?: ICallLog[];
+  whatsAppRecords?: IWhatsAppRecord[];  // ❌ ELIMINADO
+  emailRecords?: IEmailRecord[];
+  clientAIProfiles?: IClientAIProfile;
+}
+```
+
+**Después**:
+```typescript
+export interface ICustomerInteractions {
+  callLogs?: ICallLog[];
+  emailRecords?: IEmailRecord[];
+  clientAIProfiles?: IClientAIProfile;
+}
+```
+
+**Flujo de datos actual**:
+- **WhatsApp**: Frontend → `/api/client/whatsapp/get` → MCP Service → Respuesta directa
+- **Calls/Emails/AI**: Frontend → API endpoint → Firebase `customerInteractions` → Respuesta
 
 ### Estructura de Archivos
 ```

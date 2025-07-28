@@ -72,13 +72,6 @@
       "agentId": { "type": "string" },
       "notes": { "type": "string", "nullable": true },
     }],
-    "whatsAppRecords": {
-      "id": { "type": "string" },
-      "clientId": { "type": "string" },
-      "timestamp": { "type": "timestamp" },
-      "agentId": { "type": "string" },
-      "notes": { "type": "string", "nullable": true },
-    },
     "emailRecords": {
       "id": { "type": "string" },
       "clientId": { "type": "string" },

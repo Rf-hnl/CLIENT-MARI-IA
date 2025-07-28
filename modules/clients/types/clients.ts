@@ -128,7 +128,6 @@ export interface IClientDocument {
 // --- Customer Interactions Container ---
 export interface ICustomerInteractions {
   callLogs?: ICallLog[];
-  whatsAppRecords?: IWhatsAppRecord[];
   emailRecords?: IEmailRecord[];
   clientAIProfiles?: IClientAIProfile;
 }

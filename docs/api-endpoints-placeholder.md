@@ -11,7 +11,6 @@ Después del análisis de la estructura real de Firebase, los datos están organ
       "_data": { /* IClient data */ },
       "customerInteractions": {
         "callLogs": [{ /* ICallLog[] */ }],
-        "whatsAppRecords": [{ /* IWhatsAppRecord[] */ }],
         "emailRecords": [{ /* IEmailRecord[] */ }],
         "clientAIProfiles": { /* IClientAIProfile */ }
       }
@@ -31,7 +30,7 @@ tenants/{tenantId}/organizations/{organizationId}/clients/{clientId}
 ```
 
 **Funcionalidad:**
-- Obtiene `customerInteractions.whatsAppRecords` del documento del cliente
+- Obtiene datos de WhatsApp directamente desde MCP (no usa Firebase)
 - Los datos reales vienen de **servicios MCP externos**
 - Aquí solo se almacenan los IDs para referenciar los datos externos
 
@@ -110,7 +109,6 @@ interface IClientDocument {
 ```typescript
 interface ICustomerInteractions {
   callLogs?: ICallLog[];
-  whatsAppRecords?: IWhatsAppRecord[];
   emailRecords?: IEmailRecord[];
   clientAIProfiles?: IClientAIProfile;
 }
