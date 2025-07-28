@@ -1,152 +1,283 @@
 # 🧹 Protocolo de Limpieza y Eliminación de Código Duplicado
 
-## 📋 Checklist General
+> **📌 NOTA IMPORTANTE**: Este protocolo contiene las instrucciones para la limpieza de código legacy y debe ser seguido antes de agregar nuevas funcionalidades a la aplicación.
 
-### 1. **Análisis de Dependencias**
-- [ ] Identificar archivos/componentes que usan `useGlobalState` 
-- [ ] Localizar imports no utilizados
-- [ ] Detectar funciones/componentes duplicados
-- [ ] Revisar archivos de contexto obsoletos
+## 🎯 **Objetivo del Protocolo**
 
-### 2. **Limpieza de Hooks y Context**
-- [ ] Eliminar `contexts/GlobalStateContext.tsx` (si no se usa)
-- [ ] Remover `hooks/useGlobalState.ts` (si no se usa)
-- [ ] Limpiar hooks de sincronización obsoletos
-- [ ] Verificar que no haya dependencias circulares
+Este documento establece las pautas para mantener el código limpio, eliminar dependencias obsoletas y preparar la aplicación para el desarrollo futuro. Debe ser ejecutado periódicamente o antes de implementar cambios significativos.
+
+---
+
+## 📋 **Checklist General de Limpieza**
+
+### 1. **Análisis de Dependencias Legacy**
+- [ ] Identificar archivos/componentes que usan patrones obsoletos (ej: `useGlobalState`)
+- [ ] Localizar imports no utilizados con herramientas como `depcheck`
+- [ ] Detectar funciones/componentes duplicados o redundantes
+- [ ] Revisar archivos de contexto/providers que ya no son necesarios
+- [ ] Verificar que no existan dependencias circulares
+
+### 2. **Limpieza de Arquitectura**
+- [ ] Eliminar contexts/providers obsoletos
+- [ ] Remover hooks personalizados no utilizados
+- [ ] Limpiar servicios y utilidades duplicadas
+- [ ] Consolidar funciones similares en módulos unificados
+- [ ] Verificar que la arquitectura siga patrones consistentes
 
 ### 3. **Actualización de Componentes**
-- [ ] Migrar componentes de `useGlobalState` a funciones utilitarias
-- [ ] Eliminar componentes duplicados (ej: GlobalHeader vs SimpleGlobalHeader)
-- [ ] Limpiar imports no utilizados en cada componente
-- [ ] Verificar que todos los componentes tengan dependencias correctas
+- [ ] Migrar componentes legacy a patrones modernos
+- [ ] Eliminar componentes duplicados o redundantes
+- [ ] Limpiar imports no utilizados en cada archivo
+- [ ] Actualizar dependencias de componentes
+- [ ] Verificar que todos los componentes sigan las convenciones del proyecto
 
-### 4. **Archivos a Revisar y Posiblemente Eliminar**
+### 4. **Identificación de Archivos Candidatos**
 
-#### 🔴 Archivos Candidatos para Eliminación:
-```
-components/layout/GlobalHeader.tsx           # Reemplazado por SimpleGlobalHeader
-components/organizations/OrganizationManager.tsx   # Si usa useGlobalState
-components/organizations/OrganizationSwitcher.tsx  # Si usa useGlobalState  
-components/organizations/CreateOrganizationModal.tsx # Si usa useGlobalState
-contexts/GlobalStateContext.tsx             # Si no se usa más
-hooks/useGlobalState.ts                      # Si no se usa más
-docs/global-state.md                         # Documentación obsoleta
+#### 🔴 **Patrones de Archivos a Eliminar:**
+
+Buscar y evaluar archivos que contengan estos patrones:
+```bash
+# Contextos/Providers obsoletos
+*Context.tsx que usen patrones legacy
+*Provider.tsx no utilizados
+
+# Hooks personalizados obsoletos  
+use*State.ts que no sigan convenciones actuales
+use*Sync.ts para sincronización compleja innecesaria
+
+# Componentes duplicados
+*Header.tsx vs *SimpleHeader.tsx
+*Manager.tsx vs *SimpleManager.tsx
+*Modal.tsx vs *Dialog.tsx (si hay duplicación)
+
+# Documentación obsoleta
+*-state.md, *-context.md que documenten código eliminado
+README-*.md fragmentados que puedan consolidarse
 ```
 
-#### 🟡 Archivos a Actualizar:
-```
-components/profile/UserProfileCard.tsx      # ✅ Ya actualizado
-modules/auth/context/AuthContext.tsx        # ✅ Ya actualizado  
-app/layout.tsx                              # ✅ Ya actualizado
+#### 🟡 **Patrones de Archivos a Actualizar:**
+```bash
+# Componentes que usan patrones legacy
+grep -r "useGlobalState\|useComplexContext" components/
+grep -r "import.*Context.*from" components/ | grep -v "@/"
+
+# Archivos con imports no utilizados
+npx depcheck --ignores="@types/*,eslint*,prettier*"
+
+# Archivos con dependencias circulares
+madge --circular --format es6 src/
 ```
 
 ### 5. **Protocolo de Eliminación Segura**
 
-#### Paso 1: Verificar Dependencias
+> ⚠️ **ADVERTENCIA**: Seguir estos pasos en orden y nunca eliminar archivos sin verificar dependencias.
+
+#### **Paso 1: Análisis Pre-Eliminación**
 ```bash
-# Buscar referencias a archivos antes de eliminar
-grep -r "GlobalHeader" . --exclude-dir=node_modules
-grep -r "useGlobalState" . --exclude-dir=node_modules
-grep -r "GlobalStateProvider" . --exclude-dir=node_modules
+# 1.1 Crear branch de limpieza
+git checkout -b cleanup/remove-legacy-code-$(date +%Y%m%d)
+
+# 1.2 Analizar dependencias globales
+grep -r "ARCHIVO_A_ELIMINAR" . --exclude-dir=node_modules --exclude-dir=.next
+rg "ARCHIVO_A_ELIMINAR" --type ts --type tsx
+
+# 1.3 Verificar imports activos
+npx depcheck
+madge --circular src/
+
+# 1.4 Backup de seguridad
+git stash push -m "Pre-cleanup backup $(date)"
 ```
 
-#### Paso 2: Crear Branch de Limpieza
+#### **Paso 2: Eliminación Gradual**
 ```bash
-git checkout -b cleanup/remove-unused-code
+# 2.1 Eliminar archivos de menor impacto primero
+rm -f docs/*-obsolete.md
+rm -f components/unused/*.tsx
+
+# 2.2 Eliminar archivos de impacto medio
+rm -f hooks/use*Legacy*.ts
+rm -f contexts/*Obsolete*.tsx
+
+# 2.3 Eliminar archivos de alto impacto (uno por vez)
+rm -f contexts/GlobalStateContext.tsx
+npm run build # Verificar después de cada eliminación
 ```
 
-#### Paso 3: Eliminar Archivos Uno por Uno
+#### **Paso 3: Validación Post-Eliminación**
 ```bash
-# Solo después de verificar que no se usan
-rm components/layout/GlobalHeader.tsx
-rm contexts/GlobalStateContext.tsx  
-rm hooks/useGlobalState.ts
-# etc...
+# 3.1 Verificación de compilación
+npm run build
+npm run type-check
+npm run lint
+
+# 3.2 Verificación funcional
+npm run dev  # Probar rutas principales
+npm run test # Si hay tests
+
+# 3.3 Verificación de bundle
+npm run build
+npx bundle-analyzer # Verificar reducción de tamaño
 ```
 
-#### Paso 4: Verificar que la App Funciona
+#### **Paso 4: Commit Estructurado**
 ```bash
-npm run build    # Verificar que compila
-npm run dev      # Verificar que funciona
-```
+# 4.1 Commit por categoría
+git add docs/
+git commit -m "docs: remove obsolete documentation"
 
-#### Paso 5: Commit de Limpieza
-```bash
-git add .
-git commit -m "Clean up unused GlobalState code and duplicated components"
+git add components/
+git commit -m "feat: remove unused legacy components"
+
+git add hooks/ contexts/
+git commit -m "refactor: remove legacy state management"
+
+# 4.2 Push y merge
+git push -u origin cleanup/remove-legacy-code-$(date +%Y%m%d)
+# Crear PR para revisión
 ```
 
 ### 6. **Verificaciones Post-Limpieza**
 
-#### ✅ Checklist de Verificación:
-- [ ] La aplicación compila sin errores
-- [ ] No hay imports rotos
-- [ ] Todas las páginas cargan correctamente
-- [ ] No hay warnings de dependencias faltantes
-- [ ] Los tests pasan (si existen)
-- [ ] No hay código muerto en el bundle
+#### ✅ **Checklist de Validación Final:**
+- [ ] **Compilación**: `npm run build` exitoso sin errores
+- [ ] **Tipos**: `npm run type-check` sin errores de TypeScript
+- [ ] **Linting**: `npm run lint` sin errores críticos
+- [ ] **Imports**: No hay módulos rotos o no encontrados
+- [ ] **Funcionalidad**: Todas las rutas principales funcionan
+- [ ] **Tests**: Suite de tests pasa completamente
+- [ ] **Bundle**: Tamaño de bundle reducido notablemente
+- [ ] **Performance**: No degradación en métricas de rendimiento
 
-#### 🔍 Comandos de Verificación:
+#### 🔍 **Comandos de Verificación Automatizada:**
 ```bash
-# Buscar imports rotos
-npm run build 2>&1 | grep "Module not found"
+# Script completo de verificación
+#!/bin/bash
+echo "🧹 Iniciando verificación post-limpieza..."
 
-# Buscar código no utilizado  
-npx depcheck
+echo "📦 Verificando compilación..."
+npm run build > build.log 2>&1
+if [ $? -eq 0 ]; then echo "✅ Build exitoso"; else echo "❌ Build falló"; cat build.log; fi
 
-# Verificar estructura de archivos
-tree components/ hooks/ contexts/ -I node_modules
+echo "🔍 Verificando dependencias..."
+npx depcheck --json > depcheck.json
+cat depcheck.json | jq '.dependencies[]' | wc -l | xargs echo "📊 Dependencias no utilizadas:"
 
-# Buscar TODOs y comentarios de limpieza
-grep -r "TODO\|FIXME\|XXX" . --exclude-dir=node_modules
+echo "🔗 Verificando imports rotos..."
+grep -r "Module not found\|Cannot resolve" .next/build.log 2>/dev/null || echo "✅ No hay imports rotos"
+
+echo "📁 Verificando estructura..."
+find . -name "*.tsx" -o -name "*.ts" | grep -E "(components|hooks|contexts)" | wc -l | xargs echo "📈 Archivos TS/TSX restantes:"
+
+echo "🏷️ Verificando TODOs pendientes..."
+grep -r "TODO\|FIXME\|XXX" src/ 2>/dev/null | wc -l | xargs echo "📝 TODOs pendientes:"
+
+echo "✨ Verificación completada!"
 ```
 
 ### 7. **Optimizaciones Adicionales**
 
-#### 📦 Bundle Size:
-- [ ] Remover bibliotecas no utilizadas de `package.json`
-- [ ] Verificar que no se importen bibliotecas completas innecesariamente
-- [ ] Usar dynamic imports para componentes pesados
+#### 📦 **Optimización de Bundle:**
+```bash
+# Analizar dependencias no utilizadas
+npx depcheck --ignores="@types/*,eslint*"
 
-#### 🔧 Code Quality:
-- [ ] Ejecutar linter y fix automático: `npm run lint --fix`
-- [ ] Formatear código: `npm run format` 
-- [ ] Verificar tipos TypeScript: `npm run type-check`
+# Verificar imports de bibliotecas completas
+grep -r "import.*from ['\"]lodash['\"]" src/ 
+# ↳ Cambiar por: import { specific } from 'lodash/specific'
 
-#### 📁 Estructura de Archivos:
-- [ ] Consolidar archivos similares
-- [ ] Mover utilidades a carpetas apropiadas
-- [ ] Eliminar archivos de test obsoletos
+# Analizar tamaño de bundle
+npm run build && npx @next/bundle-analyzer
 
-### 8. **Documentación Post-Limpieza**
+# Dynamic imports para componentes pesados
+# Antes: import HeavyComponent from './Heavy'
+# Después: const HeavyComponent = dynamic(() => import('./Heavy'))
+```
 
-#### 📚 Actualizar Documentación:
-- [ ] README.md con nueva estructura
-- [ ] Comentarios en código complejo
-- [ ] Documentar nuevas funciones utilitarias
-- [ ] Eliminar documentación de código removido
+#### 🔧 **Calidad de Código:**
+```bash
+# Pipeline de calidad automatizada
+npm run lint --fix     # Corregir problemas automáticamente
+npm run format          # Formatear código con Prettier
+npm run type-check      # Verificar tipos TypeScript
+npm run test:coverage   # Verificar cobertura de tests
+```
+
+#### 📁 **Reestructuración Arquitectural:**
+```bash
+# Consolidar utilidades dispersas
+find . -name "utils.ts" -o -name "helpers.ts" | head -5
+# ↳ Considerar consolidar en lib/utils/
+
+# Mover componentes a estructuras consistentes
+find components/ -maxdepth 1 -name "*.tsx" | head -5
+# ↳ Mover a components/ui/ o components/feature/
+
+# Eliminar archivos de test huérfanos
+find . -name "*.test.*" -o -name "*.spec.*" | while read f; do
+  base=$(basename "$f" | sed 's/\.(test|spec)\./\./g')
+  [[ ! -f "${f%/*}/$base" ]] && echo "Test huérfano: $f"
+done
+```
+
+### 8. **Mantenimiento Continuo**
+
+#### 📚 **Documentación Viva:**
+- [ ] **README.md**: Mantener arquitectura actualizada
+- [ ] **CHANGELOG.md**: Documentar cambios significativos  
+- [ ] **API.md**: Documentar interfaces públicas
+- [ ] **TROUBLESHOOTING.md**: Soluciones a problemas comunes
+
+#### 🔄 **Automatización de Limpieza:**
+```json
+// package.json - Scripts de mantenimiento
+{
+  "scripts": {
+    "cleanup:deps": "npx depcheck && npm audit fix",
+    "cleanup:lint": "npm run lint --fix && npm run format",
+    "cleanup:build": "rm -rf .next && npm run build",
+    "cleanup:full": "npm run cleanup:deps && npm run cleanup:lint && npm run cleanup:build"
+  }
+}
+```
+
+#### 📊 **Métricas de Salud del Código:**
+```bash
+# Script de métricas automatizado
+#!/bin/bash
+echo "📊 Métricas de salud del código:"
+echo "🗂️  Archivos TS/TSX: $(find src -name '*.ts*' | wc -l)"
+echo "📦 Dependencias: $(cat package.json | jq '.dependencies | length')"
+echo "🧪 Cobertura tests: $(npm test -- --coverage --silent | grep 'All files' | awk '{print $10}')"
+echo "⚡ Bundle size: $(ls -lh .next/static/chunks/pages/_app-*.js | awk '{print $5}')"
+echo "🔧 ESLint issues: $(npm run lint --silent 2>&1 | grep -c 'error\|warning' || echo 0)"
+```
 
 ---
 
-## 🚨 **IMPORTANTE: Orden de Ejecución**
+## 🎯 **Criterios de Éxito**
 
-1. **SIEMPRE** hacer backup/commit antes de eliminar código
-2. **VERIFICAR** dependencias antes de eliminar archivos
-3. **PROBAR** la aplicación después de cada eliminación
-4. **COMMITEAR** cambios en pequeños chunks
-5. **DOCUMENTAR** cambios importantes
+Una limpieza exitosa debe cumplir:
+
+✅ **Reducción de código**: Mínimo 15% menos líneas de código  
+✅ **Mejora de bundle**: Reducción notable en tamaño de bundle  
+✅ **Cero errores**: Build, lint y tests pasan completamente  
+✅ **Mejora de performance**: Métricas de carga mejoradas o mantenidas  
+✅ **Documentación actualizada**: Toda la documentación refleja el estado actual  
+
+---
+
+## 📝 **Historial de Limpiezas**
+
+| Fecha | Descripción | Archivos Eliminados | Líneas Reducidas | Mejora Bundle |
+|-------|-------------|-------------------|------------------|---------------|
+| 2025-01-28 | Eliminación GlobalState legacy | 9 archivos | -2,076 líneas | TBD |
+| | | | | |
 
 ---
 
-## 📝 **Log de Limpieza**
-
-| Fecha | Archivo Eliminado | Razón | Status |
-|-------|------------------|-------|---------|
-| 2025-01-28 | `hooks/useAuthGlobalStateSync.ts` | Dependencia circular | ✅ |
-| 2025-01-28 | `components/providers/AuthGlobalStateSync.tsx` | No usado | ✅ |
-| | | | |
-
----
+> **💡 RECOMENDACIÓN**: Ejecutar este protocolo cada 2-3 sprints o antes de releases importantes para mantener la calidad del código.
 
 *Protocolo creado: 2025-01-28*  
-*Última actualización: 2025-01-28*
+*Última actualización: 2025-01-28*  
+*Versión: 2.0 - Mejorado para uso futuro*
