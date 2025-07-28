@@ -13,6 +13,7 @@ import {
   onAuthStateChanged,
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase/client';
+// Removed dependency on useGlobalStateInitializer to avoid circular dependency
 
 interface AuthContextType {
   currentUser: User | null;
