@@ -9,12 +9,17 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User } from 'firebase/auth';
-import { IClient } from '../types/clients';
+import { IClient, ICustomerInteractions } from '../types/clients';
 import { getCurrentUserData, getCurrentOrganization, getCurrentTenant } from '@/lib/auth/userState';
 import { useAuth } from '@/modules/auth';
 
+// Extended client type with customer interactions
+export type ExtendedClient = IClient & {
+  customerInteractions?: ICustomerInteractions;
+};
+
 interface ClientsContextType {
-  clients: IClient[];
+  clients: ExtendedClient[];
   isLoading: boolean;
   error: string | null;
   currentOrganization: any;
@@ -23,13 +28,15 @@ interface ClientsContextType {
   addClient: (clientData: Omit<IClient, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
   updateClient: (id: string, updates: Partial<IClient>) => Promise<void>;
   deleteClient: (id: string) => Promise<void>;
+  // New methods for customer interactions
+  getClientInteractions: (clientId: string) => ICustomerInteractions | undefined;
 }
 
 const ClientsContext = createContext<ClientsContextType | undefined>(undefined);
 
 export function ClientsProvider({ children }: { children: React.ReactNode }) {
   const { currentUser } = useAuth();
-  const [clients, setClients] = useState<IClient[]>([]);
+  const [clients, setClients] = useState<ExtendedClient[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentOrganization, setCurrentOrganization] = useState<any>(null);
@@ -89,11 +96,15 @@ export function ClientsProvider({ children }: { children: React.ReactNode }) {
         throw new Error(data.error || 'Error desconocido al obtener clientes');
       }
 
-      // Convertir el objeto de clientes a array
-      const clientsArray: IClient[] = Object.values(data.data || {});
+      // Convertir el objeto de clientes a array con soporte para customerInteractions
+      const clientsArray: ExtendedClient[] = Object.values(data.data || {});
       setClients(clientsArray);
 
       console.log(`📋 Se cargaron ${clientsArray.length} clientes desde ${data.path}`);
+      
+      // Log clients with AI profiles for debugging
+      const clientsWithAI = clientsArray.filter(c => c.customerInteractions?.clientAIProfiles);
+      console.log(`🤖 ${clientsWithAI.length} clientes tienen perfiles de IA inicializados`);
 
     } catch (err) {
       console.error('Error obteniendo clientes:', err);
@@ -185,6 +196,12 @@ export function ClientsProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Function to get customer interactions for a specific client
+  const getClientInteractions = (clientId: string): ICustomerInteractions | undefined => {
+    const client = clients.find(c => c.id === clientId);
+    return client?.customerInteractions;
+  };
+
   const value: ClientsContextType = {
     clients,
     isLoading,
@@ -195,6 +212,7 @@ export function ClientsProvider({ children }: { children: React.ReactNode }) {
     addClient,
     updateClient,
     deleteClient,
+    getClientInteractions,
   };
 
   return (

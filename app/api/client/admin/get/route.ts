@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase/admin';
-import { IClient } from '@/modules/clients/types/clients';
+import { IClient, IClientDocument } from '@/modules/clients/types/clients';
 // ele obejto es recibir por pamtreo el ide del tenet y ele id d ela organiacion y bucar een la ruta 
 // /tenants/{teenantId/organizations/organizationId/clients trar todos los docuemntos de clientes
 
@@ -25,11 +25,26 @@ export async function POST(request: NextRequest) {
     const clients: Record<string, IClient> = {};
 
     for (const doc of snapshot.docs) {
-      const clientData = doc.data() as Omit<IClient, 'id'>;
-      clients[doc.id] = {
-        id: doc.id,
-        ...clientData
-      };
+      const rawData = doc.data();
+      
+      // Check if document has new structure (IClientDocument) or old structure (direct IClient)
+      if (rawData._data && rawData.customerInteractions !== undefined) {
+        // New structure: IClientDocument with _data and customerInteractions
+        const clientDocument = rawData as IClientDocument;
+        clients[doc.id] = {
+          id: doc.id,
+          ...clientDocument._data,
+          // Attach customerInteractions for compatibility if needed
+          customerInteractions: clientDocument.customerInteractions
+        } as IClient & { customerInteractions?: any };
+      } else {
+        // Old structure: Direct IClient data (backward compatibility)
+        const clientData = rawData as Omit<IClient, 'id'>;
+        clients[doc.id] = {
+          id: doc.id,
+          ...clientData
+        };
+      }
     }
 
     return NextResponse.json({
