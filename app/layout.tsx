@@ -17,8 +17,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Auth Module - Client Mar-IA",
-  description: "Authentication module with Firebase",
+  title: "Client Mar-IA",
+  description: "Sistema de gestión de clientes y cobranza",
+  icons: {
+    icon: "/favicon.png",
+    shortcut: "/favicon.png",
+    apple: "/favicon.png",
+  },
 };
 
 export default function RootLayout({

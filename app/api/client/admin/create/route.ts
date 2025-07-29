@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getFirestore, collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, setDoc, doc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { IClient } from '@/modules/clients/types/clients';
 import firebaseApp from '@/lib/firebase/client';
 
@@ -59,32 +59,66 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Extract customId if provided (development mode only)
+    const { customId, ...clientDataWithoutId } = clientData;
+    const isDevelopment = process.env.NEXT_PUBLIC_DEVELOPMENT === 'true';
+    
     // Generate system fields
-    const systemFields = generateSystemFields(clientData);
+    const systemFields = generateSystemFields(clientDataWithoutId);
 
     // Prepare final client data
     const finalClientData = {
-      ...clientData,
+      ...clientDataWithoutId,
       ...systemFields,
     };
 
     // Create document path
     const clientsCollectionPath = `tenants/${tenantId}/organizations/${organizationId}/clients`;
-    const clientsRef = collection(db, clientsCollectionPath);
+    
+    let docRef;
+    let clientId;
 
-    // Add client to Firebase
-    const docRef = await addDoc(clientsRef, finalClientData);
-
-    console.log(`✅ Cliente creado exitosamente en: ${clientsCollectionPath}/${docRef.id}`);
+    // Use custom ID if provided and in development mode
+    if (isDevelopment && customId?.trim()) {
+      clientId = customId.trim();
+      const customDocRef = doc(db, clientsCollectionPath, clientId);
+      
+      // Check if document with custom ID already exists
+      const existingDoc = await getDoc(customDocRef);
+      if (existingDoc.exists()) {
+        return NextResponse.json(
+          { 
+            success: false, 
+            error: `Ya existe un cliente con el ID '${clientId}'` 
+          },
+          { status: 409 }
+        );
+      }
+      
+      // Create document with custom ID
+      await setDoc(customDocRef, finalClientData);
+      docRef = { id: clientId };
+      
+      console.log(`✅ Cliente creado con ID personalizado en: ${clientsCollectionPath}/${clientId}`);
+    } else {
+      // Use auto-generated ID
+      const clientsRef = collection(db, clientsCollectionPath);
+      docRef = await addDoc(clientsRef, finalClientData);
+      clientId = docRef.id;
+      
+      console.log(`✅ Cliente creado con ID automático en: ${clientsCollectionPath}/${clientId}`);
+    }
 
     return NextResponse.json({
       success: true,
       data: {
-        id: docRef.id,
+        id: clientId,
         ...finalClientData
       },
-      path: `${clientsCollectionPath}/${docRef.id}`,
-      message: 'Cliente creado exitosamente'
+      path: `${clientsCollectionPath}/${clientId}`,
+      message: isDevelopment && customId?.trim() 
+        ? `Cliente creado exitosamente con ID personalizado: ${clientId}`
+        : 'Cliente creado exitosamente'
     });
 
   } catch (error) {

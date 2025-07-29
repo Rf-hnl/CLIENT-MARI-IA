@@ -3,7 +3,8 @@
 import * as React from "react"
 import { usePathname } from "next/navigation"
 import Link from "next/link"
-import { Command, ChevronRight } from "lucide-react"
+import { ChevronRight } from "lucide-react"
+import Image from "next/image"
 import { useAuth } from "@/modules/auth"
 import { getEnabledModules, AppModule } from "@/config/modules.config"
 import { NavUser } from "@/components/nav-user"
@@ -63,8 +64,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
               <Link href="/dashboard">
-                <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
-                  <Command className="size-4" />
+                <div className=" text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
+                  <Image 
+                    src="/favicon.png" 
+                    alt="Client Mar-IA Logo" 
+                    width={160} 
+                    height={160}
+                    className="size-8"
+                  />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-medium">Client Mar-IA</span>

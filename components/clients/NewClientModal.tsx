@@ -12,13 +12,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
-import { AlertCircle, User, MapPin, Briefcase, Phone, FileText, Plus, Loader2 } from 'lucide-react';
+import { AlertCircle, User, MapPin, Briefcase, Phone, FileText, Plus, Loader2, Zap } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useClients } from '@/modules/clients/hooks/useClients';
 import { IClient } from '@/modules/clients/types/clients';
 
 // Tipos para el formulario
 interface NewClientFormData {
+  // DEVELOPMENT ONLY
+  customId?: string;
+  
   // REQUIRED FIELDS
   name: string;
   national_id: string;
@@ -52,6 +55,9 @@ interface NewClientFormData {
 
 // Estado inicial del formulario
 const initialFormData: NewClientFormData = {
+  // Development
+  customId: '',
+  
   // Required
   name: '',
   national_id: '',
@@ -132,6 +138,47 @@ export function NewClientModal({ trigger }: NewClientModalProps) {
     }));
   };
 
+  // Auto-rellenar formulario con datos de prueba (solo en desarrollo)
+  const handleAutoFill = () => {
+    const sampleData: NewClientFormData = {
+      // Development - ID personalizado aleatorio
+      customId: `test_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
+      
+      // Required fields
+      name: 'Carlos Rodríguez González',
+      national_id: '8-123-456',
+      phone: '+507 6311-6918',
+      debt: '8500.75',
+      status: 'overdue',
+      loan_letter: 'PREST-2024-0456',
+      
+      // Recommended fields
+      email: 'carlos.rodriguez@ejemplo.com',
+      address: 'Avenida Balboa, Torre Financial Center, Piso 15',
+      city: 'Panamá',
+      province: 'Panamá',
+      employment_status: 'Empleado a tiempo completo',
+      monthly_income: '3200.00',
+      preferred_contact_method: 'whatsapp',
+      
+      // Optional fields
+      postal_code: '0001',
+      country: 'Panamá',
+      employer: 'Copa Airlines',
+      position: 'Desarrollador Senior',
+      employment_verified: true,
+      best_contact_time: '9:00 AM - 6:00 PM (L-V)',
+      response_score: '8',
+      collection_strategy: 'Contacto directo mensual',
+      notes: 'Cliente confiable con historial de pagos. Prefiere comunicación por WhatsApp.',
+      internal_notes: 'Prioridad alta para seguimiento. Responde mejor en horarios laborales.',
+      tags: ['alta-prioridad', 'whatsapp-preferido', 'pago-regular']
+    };
+
+    setFormData(sampleData);
+    setErrors({}); // Limpiar errores
+  };
+
   // Validar formulario
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -157,6 +204,22 @@ export function NewClientModal({ trigger }: NewClientModalProps) {
     if (formData.email && formData.email.trim() && !/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = 'Formato de email inválido';
     }
+    
+    // Validación de ID personalizado (solo en desarrollo)
+    if (process.env.NEXT_PUBLIC_DEVELOPMENT === 'true' && formData.customId?.trim()) {
+      const customId = formData.customId.trim();
+      // Validar que el ID solo contenga caracteres alfanuméricos, guiones y guiones bajos
+      if (!/^[a-zA-Z0-9_-]+$/.test(customId)) {
+        newErrors.customId = 'El ID solo puede contener letras, números, guiones (-) y guiones bajos (_)';
+      }
+      // Validar longitud mínima y máxima
+      if (customId.length < 3) {
+        newErrors.customId = 'El ID debe tener al menos 3 caracteres';
+      }
+      if (customId.length > 50) {
+        newErrors.customId = 'El ID no puede exceder 50 caracteres';
+      }
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -170,6 +233,9 @@ export function NewClientModal({ trigger }: NewClientModalProps) {
     try {
       // Preparar datos para envío
       const clientData = {
+        // Development field (if provided)
+        ...(process.env.NEXT_PUBLIC_DEVELOPMENT === 'true' && formData.customId?.trim() && { customId: formData.customId.trim() }),
+        
         // Required fields
         name: formData.name.trim(),
         national_id: formData.national_id.trim(),
@@ -646,6 +712,54 @@ export function NewClientModal({ trigger }: NewClientModalProps) {
 
           {/* TAB 4: CAMPOS DEL SISTEMA */}
           <TabsContent value="system" className="space-y-6">
+            {/* Campo de ID personalizado solo en desarrollo */}
+            {process.env.NEXT_PUBLIC_DEVELOPMENT === 'true' && (
+              <Card className="border-orange-200 bg-orange-50">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-orange-700">
+                    <AlertCircle className="h-4 w-4" />
+                    Configuración de Desarrollo
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between">
+                    <Alert className="border-orange-300 bg-orange-100 flex-1">
+                      <AlertCircle className="h-4 w-4 text-orange-600" />
+                      <AlertDescription className="text-orange-800">
+                        <strong>Modo desarrollo activo:</strong> Puedes especificar un ID personalizado para el cliente.
+                      </AlertDescription>
+                    </Alert>
+                    
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleAutoFill}
+                      className="ml-4 border-orange-300 text-orange-700 hover:bg-orange-100"
+                    >
+                      <Zap className="h-4 w-4 mr-2" />
+                      Auto-rellenar
+                    </Button>
+                  </div>
+                  
+                  <div className="mt-4">
+                    <FormField 
+                      label="ID Personalizado del Cliente (Desarrollo)" 
+                      field="customId"
+                      description="Solo disponible en modo desarrollo. Si se deja vacío, se generará automáticamente."
+                    >
+                      <Input
+                        id="customId"
+                        value={formData.customId || ''}
+                        onChange={(e) => handleInputChange('customId', e.target.value)}
+                        placeholder="Ej: lcfmSHygTlxqzNxp7aBg"
+                      />
+                    </FormField>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-blue-700">

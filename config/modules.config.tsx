@@ -10,7 +10,8 @@ import {
   Database,
   Users,
   UserCog,
-  CreditCard
+  CreditCard,
+  UserPlus
 } from 'lucide-react';
 
 /**
@@ -89,6 +90,13 @@ export const MODULES: AppModule[] = [
     group: 'account',
   },
   {
+    id: 'clients-leads',
+    label: 'Leads',
+    icon: <UserPlus className="h-4 w-4" />,
+    path: '/clients/leads',
+    enabled: true,
+  },
+  {
     id: 'clients',
     label: 'Clientes',
     icon: <Users className="h-5 w-5" />,
@@ -126,7 +134,7 @@ export const MODULES: AppModule[] = [
     label: 'Analytics',
     icon: <BarChart3 className="h-5 w-5" />,
     path: '/analytics',
-    enabled: false,
+    enabled: true,
     group: 'business',
   },
   {

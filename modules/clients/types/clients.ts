@@ -196,14 +196,56 @@ export interface IEmailRecord {
   priority: "low" | "normal" | "high" | "urgent";
 }
 
-// --- AI Client Profile Model ---
+// --- AI Client Profile Model (Enhanced) ---
 export interface IClientAIProfile {
   clientId: string; // Foreign key to IClient
   analysisDate: IFirebaseTimestamp;
-  profileSegment: string; // e.g., "HighValue", "AtRisk", "Engaged"
-  riskScore?: number; // Optional, e.g., 0-100
-  engagementScore?: number; // Optional, e.g., 0-100
-  predictedChurnRisk?: boolean; // Optional
-  recommendedAction?: string; // Optional, e.g., "OfferDiscount", "PersonalizedOutreach"
   lastUpdatedByAI: IFirebaseTimestamp;
+  
+  // === SEGMENTACIÓN Y CLASIFICACIÓN ===
+  profileSegment: "HighValue" | "AtRisk" | "Engaged" | "Dormant" | "NewClient" | "VIP" | "Problematic";
+  clientTier: "Premium" | "Standard" | "Basic" | "High-Risk";
+  
+  // === PUNTUACIONES DE RIESGO (0-100) ===
+  riskScore: number; // Riesgo general de impago
+  engagementScore: number; // Nivel de engagement con comunicaciones
+  responsivenesScore: number; // Qué tan responsive es el cliente
+  paymentBehaviorScore: number; // Historial de comportamiento de pago
+  
+  // === PREDICCIONES ===
+  predictedChurnRisk: boolean; // Riesgo de abandono/fuga
+  paymentProbability: number; // Probabilidad de pago en próximos 30 días (0-100)
+  recoveryProbability: number; // Probabilidad de recuperación de deuda (0-100)
+  defaultRisk: number; // Riesgo de default/morosidad (0-100)
+  
+  // === ANÁLISIS COMPORTAMENTAL ===
+  communicationPreference: "whatsapp" | "phone" | "email" | "mixed" | "unknown";
+  bestContactTime: "morning" | "afternoon" | "evening" | "flexible" | "unknown";
+  responsePattern: "immediate" | "delayed" | "weekend-only" | "inconsistent" | "non-responsive";
+  negotiationStyle: "cooperative" | "aggressive" | "evasive" | "professional" | "unknown";
+  
+  // === ACCIONES RECOMENDADAS ===
+  recommendedAction: "PersonalizedOutreach" | "OfferDiscount" | "PaymentPlan" | "LegalAction" | "HighPriorityFollow" | "AutomatedReminder" | "HumanIntervention";
+  recommendedContactMethod: "whatsapp" | "phone" | "email" | "in-person" | "legal-notice";
+  urgencyLevel: "low" | "medium" | "high" | "critical";
+  
+  // === INSIGHTS DE IA ===
+  aiInsights: string[]; // Array de insights generados por IA
+  keyPersonalityTraits: string[]; // Rasgos de personalidad detectados
+  financialStressIndicators: string[]; // Indicadores de estrés financiero
+  
+  // === EFECTIVIDAD DE ESTRATEGIAS ===
+  mostEffectiveStrategy?: string; // Estrategia que mejor ha funcionado
+  leastEffectiveStrategy?: string; // Estrategia que peor ha funcionado
+  preferredMessageTone: "formal" | "friendly" | "urgent" | "empathetic" | "direct";
+  
+  // === CONTEXTO TEMPORAL ===
+  seasonalPaymentPattern?: "consistent" | "holiday-affected" | "end-of-month" | "irregular";
+  nextRecommendedContactDate: IFirebaseTimestamp;
+  
+  // === METADATOS ===
+  aiModel: string; // Modelo de IA utilizado para el análisis
+  confidenceScore: number; // Confianza en el análisis (0-100)
+  dataQuality: "high" | "medium" | "low"; // Calidad de los datos analizados
+  lastInteractionAnalyzed: IFirebaseTimestamp;
 }

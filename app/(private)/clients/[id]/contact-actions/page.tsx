@@ -148,15 +148,15 @@ export default function ContactActionsPage() {
           <TabsTrigger value="email-history">Historial de Email</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="whatsapp-chat" className="flex-1 flex flex-col">
-          <div className="flex items-center gap-2 mb-4 flex-wrap"> {/* Added flex-wrap for responsiveness */}
-            <span className="font-medium text-sm">Filtrar por:</span>
-            <Button variant={filterDays === null ? "default" : "outline"} size="sm" onClick={() => setFilterDays(null)}>Todo el historial</Button>
-            <Button variant={filterDays === 1 ? "default" : "outline"} size="sm" onClick={() => setFilterDays(1)}>1 día</Button>
-            <Button variant={filterDays === 2 ? "default" : "outline"} size="sm" onClick={() => setFilterDays(2)}>2 días</Button>
-            <Button variant={filterDays === 3 ? "default" : "outline"} size="sm" onClick={() => setFilterDays(3)}>3 días</Button>
-            <Button variant={filterDays === 10 ? "default" : "outline"} size="sm" onClick={() => setFilterDays(10)}>10 días</Button>
-            <Button variant={filterDays === 15 ? "default" : "outline"} size="sm" onClick={() => setFilterDays(15)}>15 días</Button>
+        <TabsContent value="whatsapp-chat" className="flex-1 flex">
+          <div className="flex items-center gap-2 mb-4 flex-col  items-start"> {/* Added flex-wrap for responsiveness */}
+            <span className="font-medium text-sm mb-2 mx-2">Filtrar por:</span>
+            <Button className='w-40 mx-2' variant={filterDays === null ? "default" : "outline"} size="sm" onClick={() => setFilterDays(null)}>Todo el historial</Button>
+            <Button className='w-40 mx-2' variant={filterDays === 1 ? "default" : "outline"} size="sm" onClick={() => setFilterDays(1)}>1 día</Button>
+            <Button className='w-40 mx-2' variant={filterDays === 2 ? "default" : "outline"} size="sm" onClick={() => setFilterDays(2)}>2 días</Button>
+            <Button className='w-40 mx-2' variant={filterDays === 3 ? "default" : "outline"} size="sm" onClick={() => setFilterDays(3)}>3 días</Button>
+            <Button className='w-40 mx-2' variant={filterDays === 10 ? "default" : "outline"} size="sm" onClick={() => setFilterDays(10)}>10 días</Button>
+            <Button className='w-40 mx-2' variant={filterDays === 15 ? "default" : "outline"} size="sm" onClick={() => setFilterDays(15)}>15 días</Button>
           </div>
           <WhatsAppHistory clientId={client.id} filterDays={filterDays} />
         </TabsContent>
