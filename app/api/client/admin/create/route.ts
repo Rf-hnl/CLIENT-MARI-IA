@@ -47,12 +47,9 @@ function generateInitialAIProfile(clientId: string): IClientAIProfile {
     financialStressIndicators: [],
     
     // Estrategias - aún no determinadas
-    mostEffectiveStrategy: undefined,
-    leastEffectiveStrategy: undefined,
     preferredMessageTone: "friendly", // Tono amigable para nuevos clientes
     
     // Contexto temporal
-    seasonalPaymentPattern: undefined, // Se determinará con tiempo
     nextRecommendedContactDate: now, // Contacto inmediato para nuevos
     
     // Metadatos
@@ -116,6 +113,9 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Construct the collection path
+    const clientsCollectionPath = `tenants/${tenantId}/organizations/${organizationId}/clients`;
 
     // Extract customId if provided (development mode only)
     const { customId, ...clientDataWithoutId } = clientData;

@@ -283,6 +283,7 @@ export default function ClientsAdmin() {
             <TableHeader>
               <TableRow>
                 <TableHead>Cliente</TableHead>
+                <TableHead>Creación/ID</TableHead>
                 <TableHead>Contacto</TableHead>
                 <TableHead>Deuda</TableHead>
                 <TableHead>Estado</TableHead>
@@ -313,6 +314,13 @@ export default function ClientsAdmin() {
                           </Badge>
                         )}
                       </div>
+                    </div>
+                  </TableCell>
+                  
+                  <TableCell>
+                    <div className="flex flex-col">
+                      <p className="text-xs font-medium">{safeFormatDate(client.created_at)}</p>
+                      <p className="text-xs text-muted-foreground font-mono">{client.id.slice(-8)}</p>
                     </div>
                   </TableCell>
                   
