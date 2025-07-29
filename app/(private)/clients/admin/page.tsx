@@ -105,7 +105,7 @@ export default function ClientsAdmin() {
   // Función para manejar eliminación exitosa
   const handleBulkDeleteSuccess = () => {
     setSelectedClients([]);
-    // No cerrar el modal aquí, dejar que se cierre solo
+    setShowBulkDeleteModal(false);
   };
 
   // Calcular estadísticas usando función del módulo admin

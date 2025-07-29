@@ -77,13 +77,12 @@ export function BulkDeleteModal({ selectedClients, isOpen, onClose, onDeleted }:
       // Refrescar la lista de clientes
       await refetch();
       
-      // Cerrar automáticamente después de 3 segundos si todo fue exitoso
+      // Cerrar automáticamente después de 2 segundos si todo fue exitoso
       setAutoClosing(true);
-      setCurrentDeletingClient(`¡${selectedClients.length} cliente${selectedClients.length > 1 ? 's' : ''} eliminado${selectedClients.length > 1 ? 's' : ''} exitosamente! Cerrando en 3 segundos...`);
+      setCurrentDeletingClient(`¡${selectedClients.length} cliente${selectedClients.length > 1 ? 's' : ''} eliminado${selectedClients.length > 1 ? 's' : ''} exitosamente!`);
       setTimeout(() => {
-        onDeleted?.(); // Llamar primero el callback
-        handleClose(); // Luego cerrar el modal
-      }, 3000);
+        onDeleted?.(); // Llamar el callback que cierra el modal y limpia estado
+      }, 2000);
 
     } catch (err) {
       console.error('Error en eliminación masiva:', err);
