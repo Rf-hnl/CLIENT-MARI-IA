@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirestore, collection, addDoc, setDoc, doc, getDoc, serverTimestamp } from 'firebase/firestore';
-import { IClient, IClientDocument, ICustomerInteractions, IClientAIProfile } from '@/modules/clients/types/clients';
+import { IClient, IClientDocument, IClientAIProfile } from '@/modules/clients/types/clients';
 import firebaseApp from '@/lib/firebase/client';
 
 const db = getFirestore(firebaseApp);

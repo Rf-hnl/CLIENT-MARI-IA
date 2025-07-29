@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase/admin';
-import { IClient, IClientDocument, ICustomerInteractions, IClientAIProfile } from '@/modules/clients/types/clients';
+import { IClient, IClientDocument, IClientAIProfile } from '@/modules/clients/types/clients';
 import { FieldValue } from 'firebase-admin/firestore';
 
 // Generate initial AI profile for migrated clients (same as single migration)

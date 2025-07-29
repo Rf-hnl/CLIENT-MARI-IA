@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirestore, doc, getDoc } from 'firebase/firestore';
-import { IWhatsAppRecord, IClientDocument, IClient } from '@/modules/clients/types/clients';
+import { IWhatsAppRecord } from '@/modules/clients/types/clients';
 import firebaseApp from '@/lib/firebase/client';
 import { getWhatsAppConversations, transformMCPToWhatsAppRecord } from '@/lib/services/mcpWhatsApp';
 
@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
     const clientData = clientDoc.data();
     
     // Los datos del cliente están directamente en el documento, no en _data
-    const client = { id: clientId, ...clientData } as IClient;
+    // const client = { id: clientId, ...clientData } as IClient; // Unused variable
 
     console.log(`📱 WhatsApp History requested for client: ${clientId} (${days} days)`);
 

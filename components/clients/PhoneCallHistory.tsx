@@ -1,9 +1,9 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+// Removed unused Select components imports
 import { safeFormatDate } from '@/utils/dateFormat';
-import { PhoneCall, Mic, RefreshCcw, ArrowLeft } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 // TODO: Implement proper phone call conversation interface
 interface IPhoneCallConversation {
   id: string;
@@ -12,7 +12,7 @@ interface IPhoneCallConversation {
   conversationSegments?: any[];
 }
 
-import { useMemo } from 'react'; // Import useMemo
+// Removed unused useMemo import
 
 interface PhoneCallListProps {
   clientId: string;

@@ -4,13 +4,8 @@
 import {
   doc,
   getDoc,
-  setDoc,
   updateDoc,
-  deleteDoc,
   collection,
-  query,
-  where,
-  getDocs,
   serverTimestamp,
   Timestamp,
   writeBatch,
@@ -27,8 +22,8 @@ import {
   UserOrganizationMembership,
   MembershipUpdateResult
 } from '@/types/globalState';
-import { FirestoreUser, UpdateFirestoreUserData } from '@/types/firestoreUser';
-import { updateFirestoreUser, ensureFirestoreUser, getUserByUid } from '@/lib/firestore/userService';
+import { UpdateFirestoreUserData } from '@/types/firestoreUser';
+import { updateFirestoreUser, getUserByUid } from '@/lib/firestore/userService';
 
 // Collection references
 const TENANTS_COLLECTION = 'tenants';

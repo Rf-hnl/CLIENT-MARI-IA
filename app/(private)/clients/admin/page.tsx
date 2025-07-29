@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/modules/auth';
 import { useRouter } from 'next/navigation';
 import { useClients } from '@/modules/clients/hooks/useClients';
-import { IClient } from '@/modules/clients/types/clients';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,7 +23,6 @@ import {
   Phone,
   Mail,
   MapPin,
-  CreditCard
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -36,10 +34,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { safeFormatDate } from '@/utils/dateFormat';
 import { 
-  validateClientData, 
-  getCompletenessColor, 
-  getRiskIcon, 
-  getValidationSummary 
+  validateClientData
 } from '@/modules/clients/utils/clientValidation';
 import ContactActionsModal from '@/components/clients/ContactActionsModal';
 import { NewClientModal } from '@/components/clients/NewClientModal';

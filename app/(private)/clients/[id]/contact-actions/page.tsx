@@ -6,18 +6,11 @@ import { useClients } from '@/modules/clients/hooks/useClients';
 import { IClient } from '@/modules/clients/types/clients';
 import { Button } from '@/components/ui/button';
 import {
-  Phone,
-  MessageCircle,
-  Mail,
-  ExternalLink,
-  User,
   MapPin,
   Clock,
-  ArrowLeft,
-  PhoneCall // New import for PhoneCall icon
+  ArrowLeft
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"; // Import Collapsible components
 import { WhatsAppHistory } from '@/components/clients/WhatsAppHistory';
@@ -54,21 +47,6 @@ export default function ContactActionsPage() {
     );
   }
 
-  const handleCall = () => {
-    if (client.phone) {
-      window.open(`tel:${client.phone}`, '_self');
-    }
-  };
-
-  const handleEmail = () => {
-    if (client.email) {
-      const subject = encodeURIComponent(`Préstamo ${client.loan_letter} - Recordatorio de pago`);
-      const body = encodeURIComponent(
-        `Estimado/a ${client.name.toUpperCase()},\n\nEsperamos que se encuentre bien. Le escribimos para conversar sobre su préstamo ${client.loan_letter}.\n\nQuedamos atentos a su respuesta.\n\nSaludos cordiales,\nEquipo de Cobranza`
-      );
-      window.open(`mailto:${client.email}?subject=${subject}&body=${body}`, '_self');
-    }
-  };
 
   const getPreferredMethodBadge = () => {
     if (!client.preferred_contact_method) return null;

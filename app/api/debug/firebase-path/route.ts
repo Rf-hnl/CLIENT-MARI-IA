@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getFirestore, collection, getDocs, doc, getDoc } from 'firebase/firestore';
+import { getFirestore, doc, getDoc } from 'firebase/firestore';
 import firebaseApp from '@/lib/firebase/client';
 
 const db = getFirestore(firebaseApp);
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
       // This is a server-side only operation in Firebase
       console.log('🔍 Investigating root collections...');
       rootCollections = ['clients', 'tenants', 'organizations', 'users'];
-    } catch (error) {
+    } catch {
       console.log('Cannot list collections from client-side');
     }
 

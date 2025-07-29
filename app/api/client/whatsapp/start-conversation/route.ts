@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirestore, doc, getDoc } from 'firebase/firestore';
-import { IClientDocument, IClient } from '@/modules/clients/types/clients';
+import { IClient } from '@/modules/clients/types/clients';
 import firebaseApp from '@/lib/firebase/client';
 import { startWhatsAppConversation } from '@/lib/services/mcpWhatsApp';
 
