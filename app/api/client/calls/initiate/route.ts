@@ -123,8 +123,13 @@ export async function POST(request: NextRequest) {
     };
 
     // 6. Realizar la llamada a la API de ElevenLabs
-    const elevenLabsApiUrl = elevenLabsConfig.apiUrl || 'https://api.elevenlabs.io/v1/convai/batch-calling/submit';
+    // Se usa la URL completa para el endpoint de batch calling para asegurar que sea correcta.
+    const elevenLabsApiUrl = 'https://api.elevenlabs.io/v1/convai/batch-calling/submit';
     const elevenLabsApiKey = elevenLabsConfig.apiKey;
+
+    console.log('ElevenLabs Payload:', JSON.stringify(elevenLabsPayload, null, 2));
+    console.log('ElevenLabs API URL:', elevenLabsApiUrl);
+    // console.log('ElevenLabs API Key:', elevenLabsApiKey); // Do not log API keys in production
 
     const elevenLabsResponse = await fetch(elevenLabsApiUrl, {
       method: 'POST',
@@ -137,7 +142,8 @@ export async function POST(request: NextRequest) {
 
     if (!elevenLabsResponse.ok) {
       const errorData = await elevenLabsResponse.json();
-      console.error('Error de ElevenLabs:', errorData);
+      console.error('Error de ElevenLabs - Status:', elevenLabsResponse.status);
+      console.error('Error de ElevenLabs - Details:', errorData);
       return NextResponse.json(
         { success: false, error: 'Error al iniciar llamada con ElevenLabs', details: errorData },
         { status: elevenLabsResponse.status }
