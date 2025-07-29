@@ -56,16 +56,17 @@ export async function POST(request: NextRequest) {
     const elevenLabsConfig: ITenantElevenLabsConfig = (elevenLabsConfigDoc.data() as any) as ITenantElevenLabsConfig; // Cast to any first
 
     // 4. Obtener detalles del agente ElevenLabs (desde la referencia local)
-    const agentDocRef = adminDb.doc(`tenants/${tenantId}/agents/${agentId}`); // Use adminDb
+    const agentDocRef = adminDb.doc(`tenants/${tenantId}/elevenlabs-agents/${agentId}`); // Use adminDb, corrected path
     const agentDoc = await agentDocRef.get();
 
-    if (!agentDoc.exists) { // Corrected: .exists is a property, not a function
-      return NextResponse.json({ success: false, error: 'Agente no encontrado' }, { status: 404 });
+    if (!agentDoc.exists) {
+      console.error(`Agente no encontrado en la ruta: ${agentDocRef.path}`);
+      return NextResponse.json({ success: false, error: `Agente no encontrado en la ruta: ${agentDocRef.path}` }, { status: 404 });
     }
     const localAgent: ITenantElevenLabsAgent = (agentDoc.data() as any) as ITenantElevenLabsAgent; // Cast to any first
 
     // Extraer el agent_id de ElevenLabs del agente local
-    const elevenLabsAgentId = localAgent.elevenLabsData?.agent_id || localAgent.elevenLabsConfig.agentId;
+    const elevenLabsAgentId = localAgent.elevenLabsConfig.agentId;
     if (!elevenLabsAgentId) {
       return NextResponse.json({ success: false, error: 'ID de agente de ElevenLabs no configurado para el agente seleccionado' }, { status: 400 });
     }

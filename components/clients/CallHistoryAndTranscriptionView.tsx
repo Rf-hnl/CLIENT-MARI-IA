@@ -88,10 +88,23 @@ export const CallHistoryAndTranscriptionView = ({ clientId, filterDays }: CallHi
 
   // Set default selected agent if available
   useEffect(() => {
-    if (agents.length > 0 && !selectedAgentId) {
+    if (agentsLoading) return;
+
+    if (agentsError) {
+      toast.error(`Error al cargar agentes: ${typeof agentsError === 'object' && agentsError !== null && 'message' in agentsError ? (agentsError as Error).message : agentsError || 'Desconocido'}`);
+      return;
+    }
+
+    if (agents.length === 0) {
+      toast.error('No hay agentes disponibles. Por favor, crea un agente para iniciar llamadas.');
+      setSelectedAgentId(null); // Ensure no agent is selected if none are available
+      return;
+    }
+
+    if (!selectedAgentId) {
       setSelectedAgentId(agents[0].id); // Select the first agent by default
     }
-  }, [agents, selectedAgentId]);
+  }, [agents, agentsLoading, agentsError]);
 
   const conversations = useMemo(() => {
     const now = new Date();

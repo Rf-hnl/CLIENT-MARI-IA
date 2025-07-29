@@ -116,35 +116,7 @@ export const useEnrichedAgents = ({ tenantId, uid }: UseEnrichedAgentsProps) => 
             }
             
           } else {
-            console.warn(`⚠️ [ENRICHED_AGENTS] Failed to fetch ElevenLabs data for agent: ${reference.elevenLabsConfig.agentId}`);
-            
-            // Usar datos del cache si están disponibles
-            const fallbackAgent: ITenantElevenLabsAgent = {
-              ...reference,
-              name: reference.cache?.name || `Agent ${reference.elevenLabsConfig.agentId}`,
-              description: 'Datos no disponibles desde ElevenLabs',
-              // Asegurar que la estructura esté completa aunque sea con valores por defecto
-              elevenLabsConfig: {
-                ...reference.elevenLabsConfig,
-                voice: {
-                  voiceId: '',
-                  voiceName: 'Voz no disponible',
-                  stability: 0.5,
-                  similarityBoost: 0.8,
-                  style: 0.0
-                },
-                conversation: {
-                  model: 'eleven_turbo_v2_5',
-                  temperature: 0,
-                  maxTokens: -1,
-                  systemPrompt: '',
-                  firstMessage: ''
-                }
-              },
-              elevenLabsData: {} as IElevenLabsAgentInfo // Empty fallback
-            };
-            
-            enrichedAgents.push(fallbackAgent);
+            console.warn(`⚠️ [ENRICHED_AGENTS] Failed to fetch ElevenLabs data for agent: ${reference.elevenLabsConfig.agentId}. Skipping this agent.`);
           }
           
         } catch (agentError) {
