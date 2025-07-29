@@ -5,11 +5,25 @@ import { Button } from '@/components/ui/button';
 import { safeFormatDate } from '@/utils/dateFormat';
 import { ArrowLeft } from 'lucide-react';
 // TODO: Implement proper phone call conversation interface
+import { ICallLog, IFirebaseTimestamp } from '@/modules/clients/types/clients'; // Import necessary types
+
 interface IPhoneCallConversation {
   id: string;
   clientId: string;
-  callLog: any;
+  callLog: ICallLog;
   conversationSegments?: any[];
+  // Add other fields that might come from the backend for display
+  callDirection?: 'inbound' | 'outbound';
+  startTime?: IFirebaseTimestamp;
+  duration?: number;
+  status?: string;
+  turns?: {
+    id: string;
+    role: 'client' | 'bot' | 'agent';
+    content: string;
+    timestamp: IFirebaseTimestamp;
+    llmResponseTime?: number;
+  }[]; // For transcription
 }
 
 // Removed unused useMemo import
@@ -32,11 +46,11 @@ export const PhoneCallList = ({ clientId, onSelectConversation, selectedConversa
             <h3 className="text-lg font-semibold mb-4">Historial de Llamadas</h3>
             {conversations.map(conversation => (
               <div
-                key={conversation.conversationId}
+                key={conversation.id}
                 className={`bg-white p-4 rounded-lg shadow-sm border cursor-pointer ${
-                  selectedConversationId === conversation.conversationId ? 'border-blue-500 ring-2 ring-blue-200' : 'border-gray-200'
+                  selectedConversationId === conversation.id ? 'border-blue-500 ring-2 ring-blue-200' : 'border-gray-200'
                 } flex justify-between items-center`}
-                onClick={() => onSelectConversation(conversation.conversationId)}
+                onClick={() => onSelectConversation(conversation.id)}
               >
                 <div>
                   <p className="font-medium">
@@ -80,12 +94,13 @@ export const PhoneCallTranscription = ({ conversation, onBackToList }: PhoneCall
         </div>
       </div>
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
-        {conversation.turns.map(turn => {
-          const isAgent = turn.role === 'agent';
-          const isBot = turn.role === 'bot';
-          const senderName = isAgent ? 'Agente' : (isBot ? 'LLM' : 'Cliente');
-          const avatarFallback = isAgent ? 'AG' : (isBot ? 'AI' : 'CL');
-          const avatarBg = isAgent ? 'bg-blue-300 text-blue-700' : (isBot ? 'bg-purple-300 text-purple-700' : 'bg-gray-300 text-gray-700');
+        {conversation.turns && conversation.turns.length > 0 ? (
+          conversation.turns.map(turn => {
+            const isAgent = turn.role === 'agent';
+            const isBot = turn.role === 'bot';
+            const senderName = isAgent ? 'Agente' : (isBot ? 'LLM' : 'Cliente');
+            const avatarFallback = isAgent ? 'AG' : (isBot ? 'AI' : 'CL');
+            const avatarBg = isAgent ? 'bg-blue-300 text-blue-700' : (isBot ? 'bg-purple-300 text-purple-700' : 'bg-gray-300 text-gray-700');
 
           return (
             <div
@@ -120,7 +135,12 @@ export const PhoneCallTranscription = ({ conversation, onBackToList }: PhoneCall
               )}
             </div>
           );
-        })}
+        }) // Closing parenthesis for map
+        ) : (
+          <div className="text-center text-muted-foreground mt-8">
+            No hay transcripción disponible para esta llamada.
+          </div>
+        )}
       </div>
     </div>
   );

@@ -5,6 +5,7 @@ import { AuthProvider } from "@/modules/auth";
 import { DashboardLayout } from "@/components/layouts/DashboardLayout";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { ClientsProvider } from "@/modules/clients/context/ClientsContext";
+import { AgentsProvider } from "@/modules/agents/context/AgentsContext"; // Import AgentsProvider
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -44,9 +45,11 @@ export default function RootLayout({
         >
           <AuthProvider>
             <ClientsProvider>
-              <DashboardLayout>
-                {children}
-              </DashboardLayout>
+              <AgentsProvider> {/* Wrap with AgentsProvider */}
+                <DashboardLayout>
+                  {children}
+                </DashboardLayout>
+              </AgentsProvider>
             </ClientsProvider>
           </AuthProvider>
         </ThemeProvider>
