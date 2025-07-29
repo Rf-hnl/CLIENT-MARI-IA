@@ -11,7 +11,8 @@ import {
   Users,
   UserCog,
   CreditCard,
-  UserPlus
+  UserPlus,
+  Bot
 } from 'lucide-react';
 
 /**
@@ -115,6 +116,13 @@ export const MODULES: AppModule[] = [
         label: 'Cobros',
         icon: <CreditCard className="h-4 w-4" />,
         path: '/clients/billing',
+        enabled: true,
+      },
+      {
+        id: 'clients-agents',
+        label: 'Agentes IA',
+        icon: <Bot className="h-4 w-4" />,
+        path: '/agents',
         enabled: true,
       },
     ],
