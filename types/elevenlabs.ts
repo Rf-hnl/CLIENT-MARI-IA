@@ -1,5 +1,8 @@
 import { Timestamp } from 'firebase/firestore';
 
+// ==========================================
+// CONFIGURACIÓN GLOBAL DE ELEVENLABS
+// ==========================================
 // Configuración global de ElevenLabs por tenant
 export interface ITenantElevenLabsConfig {
   tenantId: string;
@@ -28,6 +31,9 @@ export interface ITenantElevenLabsConfig {
   };
 }
 
+// ==========================================
+// CONFIGURACIÓN DE AGENTES
+// ==========================================
 // Configuración de voz para ElevenLabs
 export interface IElevenLabsVoiceConfig {
   voiceId: string;                   // ID de la voz en ElevenLabs
@@ -53,6 +59,9 @@ export interface IElevenLabsAgentConfig {
   conversation: IElevenLabsConversationConfig;
 }
 
+// ==========================================
+// REGLAS Y ESTADÍSTICAS DE AGENTES
+// ==========================================
 // Reglas de uso para el agente
 export interface IAgentUsageRules {
   targetScenarios: string[];         // ["overdue_payment", "follow_up", "reminder"]
@@ -86,6 +95,9 @@ export interface IAgentMetadata {
   tags: string[];                    // ["cobranza", "suave", "profesional"]
 }
 
+// ==========================================
+// RESPUESTAS DE API Y CONEXIONES
+// ==========================================
 // Respuesta de API para test de conexión
 export interface IElevenLabsConnectionTest {
   success: boolean;
@@ -118,6 +130,9 @@ export interface IElevenLabsConfigResult {
   error?: string;
 }
 
+// ==========================================
+// DATOS DE ENTRADA PARA APIS
+// ==========================================
 // Datos para crear/actualizar configuración
 export interface ICreateElevenLabsConfigData {
   apiKey: string;
@@ -128,4 +143,106 @@ export interface ICreateElevenLabsConfigData {
 
 export interface IUpdateElevenLabsConfigData extends Partial<ICreateElevenLabsConfigData> {
   // Permite actualizaciones parciales
+}
+
+// ==========================================
+// INFORMACIÓN DE AGENTES DESDE ELEVENLABS API
+// ==========================================
+// Información del agente desde ElevenLabs API (estructura real de la API)
+export interface IElevenLabsAgentInfo {
+  agent_id: string;                      // ID único del agente en ElevenLabs
+  name: string;                          // Nombre del agente
+  conversation_config: {
+    // Configuración de ASR (Automatic Speech Recognition)
+    asr: {
+      quality: string;                   // Calidad del reconocimiento de voz
+      provider: string;                  // Proveedor de ASR
+      user_input_audio_format: string;  // Formato de audio de entrada
+      keywords: string[];                // Palabras clave para reconocimiento
+    };
+    // Configuración de turnos de conversación
+    turn: {
+      turn_timeout: number;              // Timeout entre turnos
+      silence_end_call_timeout: number; // Timeout de silencio para finalizar llamada
+      mode: string;                      // Modo de conversación
+    };
+    // Configuración de TTS (Text to Speech) - IMPORTANTE para edición
+    tts: {
+      model_id: string;                  // 🎯 Modelo de TTS (eleven_turbo_v2_5, etc.)
+      voice_id: string;                  // 🎯 ID de la voz seleccionada
+      supported_voices: string[];        // Voces soportadas
+      agent_output_audio_format: string;// Formato de audio de salida
+      optimize_streaming_latency: number;// Optimización de latencia
+      stability: number;                 // 🎯 Estabilidad de la voz (0-1)
+      speed: number;                     // Velocidad de habla
+      similarity_boost: number;          // 🎯 Boost de similitud (0-1)
+      pronunciation_dictionary_locators: string[];
+    };
+    // Configuración general de conversación
+    conversation: {
+      text_only: boolean;                // Solo texto o con audio
+      max_duration_seconds: number;      // Duración máxima
+      client_events: string[];           // Eventos del cliente
+    };
+    // Configuración del agente - IMPORTANTE para edición
+    agent: {
+      first_message: string;             // 🎯 Mensaje inicial de la conversación
+      language: string;                  // Idioma del agente
+      prompt: {
+        prompt: string;                  // 🎯 Prompt del sistema
+        llm: string;                     // Modelo de LLM utilizado
+        temperature: number;             // 🎯 Temperatura del modelo (0-2)
+        max_tokens: number;              // 🎯 Máximo número de tokens (-1 = ilimitado)
+        tool_ids: string[];              // IDs de herramientas habilitadas
+      };
+    };
+  };
+  // Metadata del agente
+  metadata: {
+    created_at_unix_secs: number;        // Timestamp de creación
+  };
+  platform_settings: any;               // Configuraciones de plataforma (varía según ElevenLabs)
+  phone_numbers: string[];               // Números de teléfono asociados
+  workflow: any;                         // Flujo de trabajo (varía según configuración)
+  // Información de acceso y permisos
+  access_info: {
+    is_creator: boolean;                 // Si el usuario actual es el creador
+    creator_name: string;                // Nombre del creador
+    creator_email: string;               // Email del creador
+    role: string;                        // Rol del usuario actual
+  };
+  tags: string[];                        // Etiquetas del agente en ElevenLabs
+}
+
+// Resultado de API para obtener información del agente
+export interface IAgentInfoResult {
+  success: boolean;
+  agent?: IElevenLabsAgentInfo;
+  error?: string;
+}
+
+// ==========================================
+// ANÁLISIS Y COSTOS DE AGENTES
+// ==========================================
+// Parámetros para calcular costos esperados de LLM
+export interface IAgentLLMUsageCalculateRequest {
+  prompt_length?: number;            // Longitud del prompt en caracteres
+  number_of_pages?: number;          // Páginas de contenido en PDF o URLs en Knowledge Base
+  rag_enabled?: boolean;             // Si está habilitado Retrieval-Augmented Generation
+}
+
+// Respuesta del cálculo de costos de LLM
+export interface IAgentLLMUsageCalculateResponse {
+  success: boolean;
+  llm_prices?: {
+    [model: string]: number;         // Precio por minuto para cada modelo (ej: "gpt-4o-mini": 42)
+  };
+  error?: string;
+}
+
+// Resultado completo del cálculo de costos
+export interface IAgentCostCalculationResult {
+  success: boolean;
+  calculation?: IAgentLLMUsageCalculateResponse;
+  error?: string;
 }

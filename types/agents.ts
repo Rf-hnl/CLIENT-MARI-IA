@@ -3,41 +3,64 @@ import {
   IElevenLabsAgentConfig, 
   IAgentUsageRules, 
   IAgentStats, 
-  IAgentMetadata 
+  IAgentMetadata,
+  IElevenLabsAgentInfo
 } from './elevenlabs';
 
-// Agente ElevenLabs específico del tenant
-export interface ITenantElevenLabsAgent {
-  id: string;                        // "agent-cobranza-suave"
-  tenantId: string;                  // Vinculado al tenant
-  name: string;                      // "Agente de Cobranza Suave"
-  description: string;               // Descripción del propósito del agente
+// ==========================================
+// REFERENCIA LOCAL DE AGENTE (OPTIMIZADA)
+// ==========================================
+// Solo guarda lo mínimo necesario en Firebase
+export interface ILocalAgentReference {
+  id: string;                        // ID local único
+  tenantId: string;                  // Tenant al que pertenece
   
-  // Configuración específica del agente
-  elevenLabsConfig: IElevenLabsAgentConfig;
+  // SOLO referencia a ElevenLabs (sin duplicar datos)
+  elevenLabsConfig: {
+    agentId: string;                 // ID del agente en ElevenLabs
+  };
   
-  // Reglas de uso
+  // Cache opcional para performance (se actualiza en cada consulta)
+  cache?: {
+    name?: string;                   // Último nombre conocido
+    lastSyncAt?: Timestamp;          // Última sincronización
+  };
+  
+  // Reglas de uso LOCALES (tu lógica de negocio)
   usage: IAgentUsageRules;
   
-  // Metadata y control
+  // Metadata LOCAL
   metadata: IAgentMetadata;
   
-  // Estadísticas de uso
+  // Estadísticas LOCALES
   stats: IAgentStats;
 }
 
-// Datos para crear un nuevo agente
-export interface ICreateAgentData {
-  name: string;
-  description: string;
-  elevenLabsConfig: IElevenLabsAgentConfig;
-  usage: IAgentUsageRules;
-  tags?: string[];
+// ==========================================
+// AGENTE ENRIQUECIDO (RUNTIME)
+// ==========================================
+// Combina referencia local + datos frescos de ElevenLabs
+export interface ITenantElevenLabsAgent extends ILocalAgentReference {
+  // Datos frescos de ElevenLabs (no guardados en Firebase)
+  name: string;                      // Viene de ElevenLabs API
+  description?: string;              // Opcional
+  elevenLabsData: IElevenLabsAgentInfo; // Datos completos de ElevenLabs
 }
 
-// Datos para actualizar un agente
-export interface IUpdateAgentData extends Partial<ICreateAgentData> {
-  // Permite actualizaciones parciales
+// ==========================================
+// DATOS DE ENTRADA PARA APIS
+// ==========================================
+// Datos para crear una nueva referencia de agente (OPTIMIZADA)
+export interface ICreateAgentData {
+  elevenLabsAgentId: string;         // Solo el ID del agente en ElevenLabs
+  usage: IAgentUsageRules;           // Reglas de negocio locales
+  tags?: string[];                   // Etiquetas locales
+}
+
+// Datos para actualizar reglas locales solamente
+export interface IUpdateAgentData {
+  usage?: Partial<IAgentUsageRules>; // Solo reglas de negocio
+  tags?: string[];                   // Etiquetas locales
 }
 
 // Resultado de operaciones con agentes

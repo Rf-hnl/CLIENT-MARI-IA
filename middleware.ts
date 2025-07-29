@@ -4,7 +4,7 @@ import type { NextRequest } from 'next/server';
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   
-  const protectedRoutes = ['/dashboard', '/profile'];
+  const protectedRoutes = ['/dashboard', '/profile', '/agents', '/clients', '/billing'];
   const authRoutes = ['/', '/register', '/forgot-password'];
   
   const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));

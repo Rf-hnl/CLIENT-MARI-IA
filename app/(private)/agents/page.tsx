@@ -18,9 +18,9 @@ import {
 import { AgentsProvider, useAgentsContext } from '@/modules/agents/context/AgentsContext';
 import { ElevenLabsConfigSection } from './components/ElevenLabsConfigSection';
 import { AgentsList } from './components/AgentsList';
+import { AgentCreationModal } from './components/AgentCreationModal';
 import { AgentForm } from './components/AgentForm';
 import { AgentsStats } from './components/AgentsStats';
-import { WelcomeCard } from './components/WelcomeCard';
 import { BreadcrumbNav } from './components/BreadcrumbNav';
 import { ITenantElevenLabsAgent } from '@/types/agents';
 
@@ -35,12 +35,13 @@ function AgentsPageContent() {
   } = useAgentsContext();
   
   const [activeTab, setActiveTab] = useState(isConfigured ? 'agents' : 'config');
+  const [showAgentCreationModal, setShowAgentCreationModal] = useState(false);
   const [showAgentForm, setShowAgentForm] = useState(false);
   const [editingAgent, setEditingAgent] = useState<ITenantElevenLabsAgent | null>(null);
 
   const handleCreateAgent = () => {
     setEditingAgent(null);
-    setShowAgentForm(true);
+    setShowAgentCreationModal(true);
   };
 
   const handleEditAgent = (agent: ITenantElevenLabsAgent) => {
@@ -48,18 +49,21 @@ function AgentsPageContent() {
     setShowAgentForm(true);
   };
 
+  const handleCloseCreationModal = () => {
+    setShowAgentCreationModal(false);
+  };
+
   const handleCloseForm = () => {
     setShowAgentForm(false);
     setEditingAgent(null);
   };
 
-  // Mostrar welcome card si no está configurado y no está en modo edición
+  // Si no está configurado, ir directo a la pestaña de configuración
   if (!isConfigured && !loading && !error) {
-    return (
-      <div className="container mx-auto p-6">
-        <WelcomeCard onGetStarted={() => setActiveTab('config')} />
-      </div>
-    );
+    // Asegurar que esté en la pestaña de configuración
+    if (activeTab !== 'config') {
+      setActiveTab('config');
+    }
   }
 
   return (
@@ -195,9 +199,22 @@ function AgentsPageContent() {
         </Tabs>
       )}
 
-      {/* Agent Form Modal */}
+      {/* Agent Creation Modal (for new agents) */}
+      {showAgentCreationModal && (
+        <AgentCreationModal
+          open={showAgentCreationModal}
+          onClose={handleCloseCreationModal}
+          onSave={() => {
+            handleCloseCreationModal();
+            // La lista se actualizará automáticamente gracias al context
+          }}
+        />
+      )}
+
+      {/* Agent Form Modal (for editing existing agents) */}
       {showAgentForm && (
         <AgentForm
+          open={showAgentForm}
           agent={editingAgent}
           onClose={handleCloseForm}
           onSave={() => {

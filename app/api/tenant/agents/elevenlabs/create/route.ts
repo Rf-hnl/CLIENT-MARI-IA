@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase/admin';
 import { 
-  ITenantElevenLabsAgent, 
+  ILocalAgentReference,
   ICreateAgentData, 
   IAgentOperationResult 
 } from '@/types/agents';
@@ -23,38 +23,42 @@ export async function POST(request: NextRequest) {
     }
 
     // Validar datos requeridos
-    if (!agentData.name || !agentData.description) {
+    if (!agentData.elevenLabsAgentId) {
       return NextResponse.json(
-        { success: false, error: 'name y description son requeridos' },
+        { success: false, error: 'elevenLabsAgentId es requerido' },
         { status: 400 }
       );
     }
 
-    if (!agentData.elevenLabsConfig?.agentId) {
+    if (!agentData.usage) {
       return NextResponse.json(
-        { success: false, error: 'elevenLabsConfig.agentId es requerido' },
+        { success: false, error: 'usage rules son requeridas' },
         { status: 400 }
       );
     }
 
-    console.log(`[CREATE AGENT] Creating agent for tenant: ${tenantId}`);
+    console.log(`[CREATE AGENT] Creating agent reference for tenant: ${tenantId}`);
+    console.log(`[CREATE AGENT] ElevenLabs Agent ID: ${agentData.elevenLabsAgentId}`);
 
-    // Generar ID único para el agente
-    const agentId = agentData.name.toLowerCase()
-      .replace(/[^a-z0-9]/g, '-')
-      .replace(/-+/g, '-')
-      .replace(/^-|-$/g, '') + '-' + Date.now();
+    // Generar ID único para la referencia local
+    const localAgentId = `agent-${agentData.elevenLabsAgentId.slice(-8)}-${Date.now()}`;
 
     const now = new Date();
 
-    // Crear el agente
-    const agent: ITenantElevenLabsAgent = {
-      id: agentId,
+    // Crear SOLO la referencia local (OPTIMIZADA)
+    const agentReference: ILocalAgentReference = {
+      id: localAgentId,
       tenantId,
-      name: agentData.name,
-      description: agentData.description,
-      elevenLabsConfig: agentData.elevenLabsConfig,
+      
+      // SOLO referencia a ElevenLabs
+      elevenLabsConfig: {
+        agentId: agentData.elevenLabsAgentId
+      },
+      
+      // Reglas de negocio LOCALES
       usage: agentData.usage,
+      
+      // Metadata LOCAL
       metadata: {
         isActive: true,
         createdAt: now as any,
@@ -63,6 +67,8 @@ export async function POST(request: NextRequest) {
         version: '1.0.0',
         tags: agentData.tags || []
       },
+      
+      // Stats LOCALES
       stats: {
         totalCalls: 0,
         successfulCalls: 0,
@@ -74,29 +80,29 @@ export async function POST(request: NextRequest) {
       }
     };
 
-    // Verificar que no existe un agente con el mismo nombre
+    // Verificar que no existe ya una referencia para este agente de ElevenLabs
     const agentsPath = `tenants/${tenantId}/elevenlabs-agents`;
     const existingQuery = await adminDb.collection(agentsPath)
-      .where('name', '==', agentData.name)
+      .where('elevenLabsConfig.agentId', '==', agentData.elevenLabsAgentId)
       .get();
 
     if (!existingQuery.empty) {
       return NextResponse.json({
         success: false,
-        error: `Ya existe un agente con el nombre "${agentData.name}"`
+        error: `Ya existe una referencia para el agente ElevenLabs "${agentData.elevenLabsAgentId}"`
       } as IAgentOperationResult, { status: 409 });
     }
 
-    // Guardar en Firebase
-    const agentDocPath = `${agentsPath}/${agentId}`;
-    await adminDb.doc(agentDocPath).set(agent);
+    // Guardar SOLO la referencia en Firebase
+    const agentDocPath = `${agentsPath}/${localAgentId}`;
+    await adminDb.doc(agentDocPath).set(agentReference);
 
-    console.log(`[CREATE AGENT] Agent created successfully: ${agentId} for tenant: ${tenantId}`);
+    console.log(`[CREATE AGENT] Agent reference created successfully: ${localAgentId} for tenant: ${tenantId}`);
 
     return NextResponse.json({
       success: true,
-      message: 'Agente creado exitosamente',
-      agent
+      message: 'Referencia de agente creada exitosamente',
+      agent: agentReference
     } as IAgentOperationResult);
 
   } catch (error) {

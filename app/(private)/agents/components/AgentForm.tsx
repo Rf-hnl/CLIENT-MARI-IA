@@ -51,12 +51,22 @@ const agentSchema = z.object({
 type AgentFormData = z.infer<typeof agentSchema>;
 
 interface AgentFormProps {
-  agent: ITenantElevenLabsAgent | null;
+  open: boolean;
+  agent?: ITenantElevenLabsAgent | null;
   onClose: () => void;
   onSave: () => void;
+  mode?: 'from-scratch' | 'from-existing';
+  existingAgentId?: string;
 }
 
-export function AgentForm({ agent, onClose, onSave }: AgentFormProps) {
+export function AgentForm({ 
+  open, 
+  agent, 
+  onClose, 
+  onSave, 
+  mode = 'from-scratch', 
+  existingAgentId 
+}: AgentFormProps) {
   const { 
     voices, 
     createAgent, 
@@ -81,7 +91,7 @@ export function AgentForm({ agent, onClose, onSave }: AgentFormProps) {
     defaultValues: {
       name: agent?.name || '',
       description: agent?.description || '',
-      agentId: agent?.elevenLabsConfig.agentId || '',
+      agentId: agent?.elevenLabsConfig.agentId || existingAgentId || '',
       voiceId: agent?.elevenLabsConfig.voice.voiceId || '',
       voiceName: agent?.elevenLabsConfig.voice.voiceName || '',
       stability: agent?.elevenLabsConfig.voice.stability || 0.75,
@@ -106,16 +116,17 @@ export function AgentForm({ agent, onClose, onSave }: AgentFormProps) {
     { id: 'negotiation', label: 'Negociación' }
   ];
 
+  // ✅ CORREGIDO: Compatible con modelo de clientes
   const riskCategories = [
-    { id: 'bajo', label: 'Bajo' },
-    { id: 'medio', label: 'Medio' },
-    { id: 'alto', label: 'Alto' }
+    { id: 'prime', label: 'Prime (Bajo Riesgo)' },
+    { id: 'near-prime', label: 'Near-Prime (Riesgo Medio)' },
+    { id: 'subprime', label: 'Subprime (Alto Riesgo)' }
   ];
 
   const clientStatuses = [
     { id: 'current', label: 'Al día' },
-    { id: 'overdue', label: 'Vencido' },
-    { id: 'paid', label: 'Pagado' }
+    { id: 'overdue', label: 'Vencido' }
+    // ❌ REMOVIDO: 'paid' no existe en el modelo de clientes real
   ];
 
   const onSubmit = async (data: AgentFormData) => {
@@ -174,12 +185,17 @@ export function AgentForm({ agent, onClose, onSave }: AgentFormProps) {
   };
 
   return (
-    <Dialog open={true} onOpenChange={onClose}>
+    <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Bot className="h-5 w-5" />
-            {isEditing ? 'Editar Agente' : 'Crear Nuevo Agente'}
+{isEditing 
+              ? 'Editar Agente' 
+              : mode === 'from-existing' 
+                ? 'Configurar Agente Existente' 
+                : 'Crear Nuevo Agente'
+            }
           </DialogTitle>
         </DialogHeader>
 
@@ -484,7 +500,6 @@ export function AgentForm({ agent, onClose, onSave }: AgentFormProps) {
                     {scenarios.map(scenario => (
                       <div key={scenario.id} className="flex items-center space-x-2">
                         <Checkbox
-                          id={scenario.id}
                           checked={selectedScenarios.includes(scenario.id)}
                           onCheckedChange={(checked) => {
                             if (checked) {
@@ -509,7 +524,6 @@ export function AgentForm({ agent, onClose, onSave }: AgentFormProps) {
                     {riskCategories.map(risk => (
                       <div key={risk.id} className="flex items-center space-x-2">
                         <Checkbox
-                          id={risk.id}
                           checked={selectedRiskCategories.includes(risk.id)}
                           onCheckedChange={(checked) => {
                             if (checked) {
@@ -534,7 +548,6 @@ export function AgentForm({ agent, onClose, onSave }: AgentFormProps) {
                     {clientStatuses.map(status => (
                       <div key={status.id} className="flex items-center space-x-2">
                         <Checkbox
-                          id={status.id}
                           checked={selectedClientStatuses.includes(status.id)}
                           onCheckedChange={(checked) => {
                             if (checked) {

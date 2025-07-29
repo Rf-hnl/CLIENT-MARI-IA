@@ -33,7 +33,7 @@ Tu objetivo es recuperar el pago pero manteniendo una buena relación con el cli
     usage: {
       targetScenarios: ['overdue_payment', 'follow_up'],
       daysOverdueRange: { min: 1, max: 30 },
-      riskCategories: ['bajo', 'medio'],
+      riskCategories: ['prime', 'near-prime'],
       clientStatuses: ['overdue'],
       priority: 7
     },
@@ -77,7 +77,7 @@ Tu objetivo es obtener el pago o un compromiso firme de pago con fechas específ
     usage: {
       targetScenarios: ['overdue_payment', 'negotiation'],
       daysOverdueRange: { min: 31, max: 90 },
-      riskCategories: ['medio', 'alto'],
+      riskCategories: ['near-prime', 'subprime'],
       clientStatuses: ['overdue'],
       priority: 8
     },
@@ -121,7 +121,7 @@ Tu objetivo es mantener una buena relación y prevenir futuros atrasos.`,
     usage: {
       targetScenarios: ['reminder', 'follow_up'],
       daysOverdueRange: { min: -7, max: 0 },
-      riskCategories: ['bajo'],
+      riskCategories: ['prime'],
       clientStatuses: ['current'],
       priority: 5
     },
@@ -167,7 +167,7 @@ Tu objetivo es recuperar la mayor cantidad posible manteniendo al cliente.`,
     usage: {
       targetScenarios: ['negotiation', 'overdue_payment'],
       daysOverdueRange: { min: 60, max: 365 },
-      riskCategories: ['alto'],
+      riskCategories: ['subprime'],
       clientStatuses: ['overdue'],
       priority: 9
     },

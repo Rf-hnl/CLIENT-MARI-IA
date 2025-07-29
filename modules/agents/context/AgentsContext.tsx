@@ -5,6 +5,7 @@ import { useAuth } from '@/modules/auth';
 import { useClients } from '@/modules/clients/hooks/useClients';
 import { useAgents } from '../hooks/useAgents';
 import { useElevenLabsConfig } from '../hooks/useElevenLabsConfig';
+import { useEnrichedAgents } from '../hooks/useEnrichedAgents';
 import { 
   ITenantElevenLabsAgent, 
   ICreateAgentData, 
@@ -49,6 +50,8 @@ interface AgentsContextType {
   deleteConfig: () => Promise<any>;
   testConnection: (testConfig?: any) => Promise<any>;
   fetchVoices: () => Promise<void>;
+  fetchAgentInfo: (agentId: string, testConfig?: any) => Promise<any>;
+  updateAgentInElevenLabs: (agentId: string, updateData: any) => Promise<any>;
   
   // Helpers
   getAgentById: (id: string) => ITenantElevenLabsAgent | undefined;
@@ -74,16 +77,19 @@ export function AgentsProvider({ children }: AgentsProviderProps) {
 
   // Hooks para agentes y configuración
   const agentsHook = useAgents({ tenantId, uid });
+  const enrichedAgentsHook = useEnrichedAgents({ tenantId, uid });
   const configHook = useElevenLabsConfig({ tenantId, uid });
 
+  console.log('🔄 [AGENTS_CONTEXT] Using enriched agents hook for optimized data fetching');
+
   const contextValue: AgentsContextType = {
-    // Agentes
-    agents: agentsHook.agents,
-    activeAgents: agentsHook.activeAgents,
-    inactiveAgents: agentsHook.inactiveAgents,
-    stats: agentsHook.stats,
-    loading: agentsHook.loading || configHook.loading,
-    error: agentsHook.error || configHook.error,
+    // Agentes ENRIQUECIDOS (con datos frescos de ElevenLabs)
+    agents: enrichedAgentsHook.agents,
+    activeAgents: enrichedAgentsHook.agents.filter(a => a.metadata.isActive),
+    inactiveAgents: enrichedAgentsHook.agents.filter(a => !a.metadata.isActive),
+    stats: agentsHook.stats, // Mantener stats del hook original
+    loading: enrichedAgentsHook.loading || configHook.loading,
+    error: enrichedAgentsHook.error || configHook.error,
     
     // Configuración ElevenLabs
     config: configHook.config,
@@ -91,10 +97,15 @@ export function AgentsProvider({ children }: AgentsProviderProps) {
     voices: configHook.voices,
     testing: configHook.testing,
     
-    // Métodos de agentes
-    fetchAgents: agentsHook.fetchAgents,
+    // Métodos de agentes (OPTIMIZADOS)
+    fetchAgents: enrichedAgentsHook.fetchEnrichedAgents,
     fetchAgent: agentsHook.fetchAgent,
-    createAgent: agentsHook.createAgent,
+    createAgent: async (agentData) => {
+      const result = await agentsHook.createAgent(agentData);
+      // Refrescar los agentes enriquecidos después de crear
+      await enrichedAgentsHook.fetchEnrichedAgents();
+      return result;
+    },
     updateAgent: agentsHook.updateAgent,
     deleteAgent: agentsHook.deleteAgent,
     toggleAgentStatus: agentsHook.toggleAgentStatus,
@@ -106,6 +117,8 @@ export function AgentsProvider({ children }: AgentsProviderProps) {
     deleteConfig: configHook.deleteConfig,
     testConnection: configHook.testConnection,
     fetchVoices: configHook.fetchVoices,
+    fetchAgentInfo: configHook.fetchAgentInfo,
+    updateAgentInElevenLabs: configHook.updateAgentInElevenLabs,
     
     // Helpers
     getAgentById: agentsHook.getAgentById,
@@ -113,6 +126,7 @@ export function AgentsProvider({ children }: AgentsProviderProps) {
     getAgentsByRisk: agentsHook.getAgentsByRisk,
     clearError: () => {
       agentsHook.clearError();
+      enrichedAgentsHook.clearError();
       configHook.clearError();
     }
   };

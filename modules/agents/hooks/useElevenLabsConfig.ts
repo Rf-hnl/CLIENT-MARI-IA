@@ -5,7 +5,8 @@ import {
   IUpdateElevenLabsConfigData,
   IElevenLabsConfigResult,
   IElevenLabsConnectionTest,
-  IElevenLabsVoice 
+  IElevenLabsVoice,
+  IAgentInfoResult 
 } from '@/types/elevenlabs';
 
 interface UseElevenLabsConfigProps {
@@ -206,6 +207,90 @@ export const useElevenLabsConfig = ({ tenantId, uid }: UseElevenLabsConfigProps)
     }
   }, [tenantId]);
 
+  // Obtener información del agente por ID
+  const fetchAgentInfo = useCallback(async (agentId: string, testConfig?: {
+    apiKey: string;
+    apiUrl: string;
+  }) => {
+    if (!tenantId) throw new Error('tenantId es requerido');
+    if (!agentId) throw new Error('agentId es requerido');
+
+    console.log('🔍 [HOOK] Obteniendo información del agente:', agentId);
+    setTesting(true);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/tenant/elevenlabs/agent-info', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenantId, agentId, testConfig })
+      });
+
+      console.log('📨 [HOOK] Response status:', response.status);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const result: IAgentInfoResult = await response.json();
+      console.log('🎯 [HOOK] Información del agente:', result);
+      
+      return result;
+    } catch (err) {
+      console.error('🚨 [HOOK] Error al obtener información del agente:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Error de conexión';
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setTesting(false);
+    }
+  }, [tenantId]);
+
+  // Actualizar agente en ElevenLabs
+  const updateAgentInElevenLabs = useCallback(async (agentId: string, updateData: {
+    name?: string;
+    first_message?: string;
+    system_prompt?: string;
+    voice_id?: string;
+    stability?: number;
+    similarity_boost?: number;
+    temperature?: number;
+    max_tokens?: number;
+  }) => {
+    if (!tenantId) throw new Error('tenantId es requerido');
+    if (!agentId) throw new Error('agentId es requerido');
+
+    console.log('🔄 [HOOK] Actualizando agente en ElevenLabs:', agentId);
+    setTesting(true);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/tenant/elevenlabs/agent-update', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenantId, agentId, updateData })
+      });
+
+      console.log('📨 [HOOK] Update response status:', response.status);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      console.log('🎯 [HOOK] Agente actualizado:', result);
+      
+      return result;
+    } catch (err) {
+      console.error('🚨 [HOOK] Error al actualizar agente:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Error de conexión';
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setTesting(false);
+    }
+  }, [tenantId]);
+
   // Cargar configuración al montar o cambiar tenantId
   useEffect(() => {
     fetchConfig();
@@ -223,6 +308,8 @@ export const useElevenLabsConfig = ({ tenantId, uid }: UseElevenLabsConfigProps)
     deleteConfig,
     testConnection,
     fetchVoices,
+    fetchAgentInfo,
+    updateAgentInElevenLabs,
     isConfigured: !!config,
     clearError: () => setError(null)
   };

@@ -1,4 +1,5 @@
 import { Metadata } from 'next'
+import { ProtectedRoute } from '@/modules/auth'
 
 export const metadata: Metadata = {
   title: 'Agentes IA - Client Mar-IA',
@@ -10,5 +11,9 @@ export default function AgentsLayout({
 }: {
   children: React.ReactNode
 }) {
-  return children
+  return (
+    <ProtectedRoute requireEmailVerification={true}>
+      {children}
+    </ProtectedRoute>
+  )
 }

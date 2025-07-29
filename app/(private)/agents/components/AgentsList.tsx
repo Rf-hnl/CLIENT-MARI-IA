@@ -31,7 +31,9 @@ import {
   PowerOff,
   Phone,
   Clock,
-  DollarSign
+  DollarSign,
+  AlertTriangle,
+  Volume2
 } from 'lucide-react';
 import { useAgentsContext } from '@/modules/agents/context/AgentsContext';
 import { ITenantElevenLabsAgent } from '@/types/agents';
@@ -112,6 +114,28 @@ export function AgentsList({ onEditAgent }: AgentsListProps) {
     ));
   };
 
+  const hasVoiceConfigured = (agent: ITenantElevenLabsAgent) => {
+    const voiceId = agent.elevenLabsConfig?.voice?.voiceId || agent.elevenLabsData?.conversation_config?.tts?.voice_id;
+    return voiceId && voiceId.trim() !== '';
+  };
+
+  const getVoiceStatusBadge = (agent: ITenantElevenLabsAgent) => {
+    if (!hasVoiceConfigured(agent)) {
+      return (
+        <Badge variant="outline" className="text-red-600 border-red-300 bg-red-50">
+          <AlertTriangle className="h-3 w-3 mr-1" />
+          Sin Voz
+        </Badge>
+      );
+    }
+    return (
+      <Badge variant="outline" className="text-green-600 border-green-300 bg-green-50">
+        <Volume2 className="h-3 w-3 mr-1" />
+        Voz OK
+      </Badge>
+    );
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -180,6 +204,7 @@ export function AgentsList({ onEditAgent }: AgentsListProps) {
               <TableRow>
                 <TableHead>Agente</TableHead>
                 <TableHead>Estado</TableHead>
+                <TableHead>Voz</TableHead>
                 <TableHead>Escenarios</TableHead>
                 <TableHead>Configuración</TableHead>
                 <TableHead>Estadísticas</TableHead>
@@ -275,7 +300,7 @@ export function AgentsList({ onEditAgent }: AgentsListProps) {
                         <DropdownMenuLabel>Acciones</DropdownMenuLabel>
                         <DropdownMenuItem onClick={() => onEditAgent(agent)}>
                           <Edit className="h-4 w-4 mr-2" />
-                          Editar
+                          Detalles/Editar
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleToggleStatus(agent)}>
                           {agent.metadata.isActive ? (
