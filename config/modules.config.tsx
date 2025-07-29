@@ -98,6 +98,14 @@ export const MODULES: AppModule[] = [
     enabled: true,
   },
   {
+    id: 'agents',
+    label: 'Agentes IA',
+    icon: <Bot className="h-5 w-5" />,
+    path: '/agents',
+    enabled: true,
+    group: 'business',
+  },
+  {
     id: 'clients',
     label: 'Clientes',
     icon: <Users className="h-5 w-5" />,
@@ -116,13 +124,6 @@ export const MODULES: AppModule[] = [
         label: 'Cobros',
         icon: <CreditCard className="h-4 w-4" />,
         path: '/clients/billing',
-        enabled: true,
-      },
-      {
-        id: 'clients-agents',
-        label: 'Agentes IA',
-        icon: <Bot className="h-4 w-4" />,
-        path: '/agents',
         enabled: true,
       },
     ],

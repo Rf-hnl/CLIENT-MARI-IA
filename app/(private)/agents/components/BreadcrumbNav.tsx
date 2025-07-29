@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ChevronRight, Home, Users, Bot } from 'lucide-react';
+import { ChevronRight, Home, Bot } from 'lucide-react';
 
 export function BreadcrumbNav() {
   return (
@@ -12,14 +12,6 @@ export function BreadcrumbNav() {
       >
         <Home className="h-3 w-3" />
         Inicio
-      </Link>
-      <ChevronRight className="h-3 w-3" />
-      <Link 
-        href="/clients/admin" 
-        className="flex items-center gap-1 hover:text-foreground transition-colors"
-      >
-        <Users className="h-3 w-3" />
-        Clientes
       </Link>
       <ChevronRight className="h-3 w-3" />
       <div className="flex items-center gap-1 text-foreground font-medium">
