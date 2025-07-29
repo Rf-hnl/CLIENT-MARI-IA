@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
 
     console.log(`[LIST AGENTS] Fetching agents for tenant: ${tenantId}`);
 
-    const agentsPath = `tenants/${tenantId}/agents/elevenlabs`;
+    const agentsPath = `tenants/${tenantId}/elevenlabs-agents`;
     const agentsCollectionRef = adminDb.collection(agentsPath);
     
     let query: any = agentsCollectionRef;

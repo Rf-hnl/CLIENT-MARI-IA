@@ -70,6 +70,8 @@ export function AgentsProvider({ children }: AgentsProviderProps) {
   const tenantId = currentTenant?.id || null;
   const uid = currentUser?.uid || null;
 
+  console.log('🏢 [AGENTS_CONTEXT] Tenant info:', { tenantId, uid, currentTenant });
+
   // Hooks para agentes y configuración
   const agentsHook = useAgents({ tenantId, uid });
   const configHook = useElevenLabsConfig({ tenantId, uid });

@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
     };
 
     // Verificar que no existe un agente con el mismo nombre
-    const agentsPath = `tenants/${tenantId}/agents/elevenlabs`;
+    const agentsPath = `tenants/${tenantId}/elevenlabs-agents`;
     const existingQuery = await adminDb.collection(agentsPath)
       .where('name', '==', agentData.name)
       .get();

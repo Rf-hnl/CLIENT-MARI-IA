@@ -25,7 +25,7 @@ export async function GET(
 
     console.log(`[GET AGENT] Fetching agent: ${agentId} for tenant: ${tenantId}`);
 
-    const agentDocPath = `tenants/${tenantId}/agents/elevenlabs/${agentId}`;
+    const agentDocPath = `tenants/${tenantId}/elevenlabs-agents/${agentId}`;
     const agentDoc = await adminDb.doc(agentDocPath).get();
 
     if (!agentDoc.exists) {
@@ -79,7 +79,7 @@ export async function PUT(
 
     console.log(`[UPDATE AGENT] Updating agent: ${agentId} for tenant: ${tenantId}`);
 
-    const agentDocPath = `tenants/${tenantId}/agents/elevenlabs/${agentId}`;
+    const agentDocPath = `tenants/${tenantId}/elevenlabs-agents/${agentId}`;
     const agentDoc = await adminDb.doc(agentDocPath).get();
 
     if (!agentDoc.exists) {
@@ -94,7 +94,7 @@ export async function PUT(
 
     // Si se está cambiando el nombre, verificar que no exista otro con el mismo nombre
     if (updateData.name && updateData.name !== currentAgent.name) {
-      const agentsPath = `tenants/${tenantId}/agents/elevenlabs`;
+      const agentsPath = `tenants/${tenantId}/elevenlabs-agents`;
       const existingQuery = await adminDb.collection(agentsPath)
         .where('name', '==', updateData.name)
         .get();
@@ -171,7 +171,7 @@ export async function DELETE(
 
     console.log(`[DELETE AGENT] Deleting agent: ${agentId} for tenant: ${tenantId}`);
 
-    const agentDocPath = `tenants/${tenantId}/agents/elevenlabs/${agentId}`;
+    const agentDocPath = `tenants/${tenantId}/elevenlabs-agents/${agentId}`;
     const agentDoc = await adminDb.doc(agentDocPath).get();
 
     if (!agentDoc.exists) {

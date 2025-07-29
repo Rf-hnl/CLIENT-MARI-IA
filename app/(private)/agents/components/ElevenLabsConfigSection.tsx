@@ -2,8 +2,6 @@
 
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,19 +23,17 @@ import {
 import { useAgentsContext } from '@/modules/agents/context/AgentsContext';
 import { ICreateElevenLabsConfigData, IUpdateElevenLabsConfigData } from '@/types/elevenlabs';
 
-const configSchema = z.object({
-  apiKey: z.string().min(1, 'API Key es requerida'),
-  apiUrl: z.string().url('Debe ser una URL válida'),
-  phoneId: z.string().min(1, 'Phone ID es requerido'),
-  defaultVoiceId: z.string().optional(),
-  timezone: z.string().min(1, 'Timezone es requerida'),
-  allowedCallHoursStart: z.string().min(1, 'Hora de inicio es requerida'),
-  allowedCallHoursEnd: z.string().min(1, 'Hora de fin es requerida'),
-  maxConcurrentCalls: z.number().min(1).max(50),
-  costLimitPerMonth: z.number().min(0)
-});
-
-type ConfigFormData = z.infer<typeof configSchema>;
+type ConfigFormData = {
+  apiKey: string;
+  apiUrl: string;
+  phoneId: string;
+  defaultVoiceId?: string;
+  timezone: string;
+  allowedCallHoursStart: string;
+  allowedCallHoursEnd: string;
+  maxConcurrentCalls: number;
+  costLimitPerMonth: number;
+};
 
 export function ElevenLabsConfigSection() {
   const { 
@@ -58,7 +54,6 @@ export function ElevenLabsConfigSection() {
   const [isEditing, setIsEditing] = useState(!isConfigured);
 
   const form = useForm<ConfigFormData>({
-    resolver: zodResolver(configSchema),
     defaultValues: {
       apiKey: config?.apiKey || '',
       apiUrl: config?.apiUrl || 'https://api.elevenlabs.io',
@@ -68,7 +63,7 @@ export function ElevenLabsConfigSection() {
       allowedCallHoursStart: config?.settings?.allowedCallHours?.start || '09:00',
       allowedCallHoursEnd: config?.settings?.allowedCallHours?.end || '18:00',
       maxConcurrentCalls: config?.settings?.maxConcurrentCalls || 5,
-      costLimitPerMonth: config?.settings?.costLimitPerMonth || 1000
+      costLimitPerMonth: config?.settings?.costLimitPerMonth || 5
     }
   });
 
@@ -87,7 +82,7 @@ export function ElevenLabsConfigSection() {
           },
           allowedDays: [1, 2, 3, 4, 5], // Lun-Vie por defecto
           maxConcurrentCalls: data.maxConcurrentCalls,
-          costLimitPerMonth: data.costLimitPerMonth
+          costLimitPerMonth: data.costLimitPerMonth || 5
         }
       };
 
@@ -105,20 +100,43 @@ export function ElevenLabsConfigSection() {
   };
 
   const handleTestConnection = async () => {
+    console.log('🔍 [FRONTEND] Iniciando test de conexión...');
+    
     try {
+      // Limpiar resultado anterior
+      setTestResult(null);
+      
       const testConfig = {
         apiKey: form.getValues('apiKey'),
         apiUrl: form.getValues('apiUrl'),
         phoneId: form.getValues('phoneId')
       };
 
+      console.log('📤 [FRONTEND] Enviando configuración:', {
+        apiKey: testConfig.apiKey ? `${testConfig.apiKey.substring(0, 10)}...` : 'VACÍO',
+        apiUrl: testConfig.apiUrl,
+        phoneId: testConfig.phoneId ? `${testConfig.phoneId.substring(0, 10)}...` : 'VACÍO'
+      });
+
       const result = await testConnection(testConfig);
+      console.log('📥 [FRONTEND] Resultado recibido:', result);
+      
       setTestResult(result);
       
       if (result.success) {
-        await fetchVoices();
+        console.log('✅ [FRONTEND] Test exitoso!');
+        if (result.voices && result.voices.length > 0) {
+          console.log('🎵 [FRONTEND] Voces recibidas en el test:', result.voices.length);
+          // Las voces ya están en el resultado, no necesitamos llamar fetchVoices
+        } else {
+          console.log('🔄 [FRONTEND] Cargando voces por separado...');
+          await fetchVoices();
+        }
+      } else {
+        console.log('❌ [FRONTEND] Test falló:', result.error);
       }
     } catch (error) {
+      console.error('💥 [FRONTEND] Error en handleTestConnection:', error);
       setTestResult({
         success: false,
         message: 'Error al probar la conexión',
@@ -228,195 +246,224 @@ export function ElevenLabsConfigSection() {
           ) : (
             // Formulario de edición
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* API Key */}
-                  <FormField
-                    control={form.control}
-                    name="apiKey"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>API Key *</FormLabel>
-                        <FormControl>
-                          <div className="relative">
-                            <Input
-                              type={showApiKey ? 'text' : 'password'}
-                              placeholder="sk-..."
-                              {...field}
-                              className="pr-10"
-                            />
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="absolute right-0 top-0 h-full px-3"
-                              onClick={() => setShowApiKey(!showApiKey)}
-                            >
-                              {showApiKey ? (
-                                <EyeOff className="h-4 w-4" />
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+                {/* Configuración Principal de ElevenLabs */}
+                <div className="space-y-4">
+                  <div className="pb-2 border-b">
+                    <h3 className="text-lg font-semibold text-gray-900">Configuración Principal</h3>
+                    <p className="text-sm text-muted-foreground">Credenciales básicas de ElevenLabs</p>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* API Key */}
+                    <FormField
+                      control={form.control}
+                      name="apiKey"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>API Key *</FormLabel>
+                          <FormControl>
+                            <div className="relative">
+                              <Input
+                                type={showApiKey ? 'text' : 'password'}
+                                placeholder="sk-..."
+                                {...field}
+                                className="pr-10"
+                              />
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="absolute right-0 top-0 h-full px-3"
+                                onClick={() => setShowApiKey(!showApiKey)}
+                              >
+                                {showApiKey ? (
+                                  <EyeOff className="h-4 w-4" />
+                                ) : (
+                                  <Eye className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* API URL */}
+                    <FormField
+                      control={form.control}
+                      name="apiUrl"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>API URL *</FormLabel>
+                          <FormControl>
+                            <Input placeholder="https://api.elevenlabs.io" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Phone ID */}
+                    <FormField
+                      control={form.control}
+                      name="phoneId"
+                      render={({ field }) => (
+                        <FormItem className="md:col-span-2">
+                          <FormLabel>Phone ID *</FormLabel>
+                          <FormControl>
+                            <Input placeholder="phone_id_from_elevenlabs" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+
+                {/* Configuración Adicional */}
+                <div className="space-y-4">
+                  <div className="pb-2 border-b">
+                    <h3 className="text-lg font-semibold text-gray-900">Configuración Adicional</h3>
+                    <p className="text-sm text-muted-foreground">Ajustes opcionales y configuración de comportamiento</p>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Default Voice */}
+                    <FormField
+                      control={form.control}
+                      name="defaultVoiceId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Voz Por Defecto</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder={
+                                  voices.length === 0 
+                                    ? "Primero prueba la conexión para cargar voces" 
+                                    : "Seleccionar voz"
+                                } />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {voices.length === 0 ? (
+                                <SelectItem value="no-voices" disabled>
+                                  No hay voces disponibles. Prueba la conexión primero.
+                                </SelectItem>
                               ) : (
-                                <Eye className="h-4 w-4" />
+                                voices.map((voice) => (
+                                  <SelectItem key={voice.voice_id} value={voice.voice_id}>
+                                    {voice.name} - {voice.category}
+                                  </SelectItem>
+                                ))
                               )}
-                            </Button>
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                  {/* API URL */}
-                  <FormField
-                    control={form.control}
-                    name="apiUrl"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>API URL *</FormLabel>
-                        <FormControl>
-                          <Input placeholder="https://api.elevenlabs.io" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                    {/* Timezone */}
+                    <FormField
+                      control={form.control}
+                      name="timezone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Zona Horaria *</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Seleccionar timezone" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="America/Bogota">América/Bogotá (GMT-5)</SelectItem>
+                              <SelectItem value="America/Mexico_City">América/Ciudad_de_México (GMT-6)</SelectItem>
+                              <SelectItem value="America/New_York">América/Nueva_York (GMT-5/-4)</SelectItem>
+                              <SelectItem value="Europe/Madrid">Europa/Madrid (GMT+1/+2)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                  {/* Phone ID */}
-                  <FormField
-                    control={form.control}
-                    name="phoneId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Phone ID *</FormLabel>
-                        <FormControl>
-                          <Input placeholder="phone_id_from_elevenlabs" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {/* Default Voice */}
-                  <FormField
-                    control={form.control}
-                    name="defaultVoiceId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Voz Por Defecto</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    {/* Horario de inicio */}
+                    <FormField
+                      control={form.control}
+                      name="allowedCallHoursStart"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Hora de Inicio *</FormLabel>
                           <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Seleccionar voz" />
-                            </SelectTrigger>
+                            <Input type="time" {...field} />
                           </FormControl>
-                          <SelectContent>
-                            {voices.map((voice) => (
-                              <SelectItem key={voice.voice_id} value={voice.voice_id}>
-                                {voice.name} - {voice.category}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                  {/* Timezone */}
-                  <FormField
-                    control={form.control}
-                    name="timezone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Zona Horaria *</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    {/* Horario de fin */}
+                    <FormField
+                      control={form.control}
+                      name="allowedCallHoursEnd"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Hora de Fin *</FormLabel>
                           <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Seleccionar timezone" />
-                            </SelectTrigger>
+                            <Input type="time" {...field} />
                           </FormControl>
-                          <SelectContent>
-                            <SelectItem value="America/Bogota">América/Bogotá (GMT-5)</SelectItem>
-                            <SelectItem value="America/Mexico_City">América/Ciudad_de_México (GMT-6)</SelectItem>
-                            <SelectItem value="America/New_York">América/Nueva_York (GMT-5/-4)</SelectItem>
-                            <SelectItem value="Europe/Madrid">Europa/Madrid (GMT+1/+2)</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                  {/* Horario de inicio */}
-                  <FormField
-                    control={form.control}
-                    name="allowedCallHoursStart"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Hora de Inicio *</FormLabel>
-                        <FormControl>
-                          <Input type="time" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                    {/* Llamadas concurrentes */}
+                    <FormField
+                      control={form.control}
+                      name="maxConcurrentCalls"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Máx. Llamadas Concurrentes *</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              min="1"
+                              max="50"
+                              {...field}
+                              onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                  {/* Horario de fin */}
-                  <FormField
-                    control={form.control}
-                    name="allowedCallHoursEnd"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Hora de Fin *</FormLabel>
-                        <FormControl>
-                          <Input type="time" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {/* Llamadas concurrentes */}
-                  <FormField
-                    control={form.control}
-                    name="maxConcurrentCalls"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Máx. Llamadas Concurrentes *</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            min="1"
-                            max="50"
-                            {...field}
-                            onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {/* Límite de costo */}
-                  <FormField
-                    control={form.control}
-                    name="costLimitPerMonth"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Límite de Costo Mensual (USD) *</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            {...field}
-                            onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                    {/* Límite de costo */}
+                    <FormField
+                      control={form.control}
+                      name="costLimitPerMonth"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Límite de Costo Mensual (USD)</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              placeholder="5.00"
+                              {...field}
+                              onChange={(e) => field.onChange(parseFloat(e.target.value) || 5)}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                 </div>
 
                 {/* Botones de acción */}
@@ -466,26 +513,45 @@ export function ElevenLabsConfigSection() {
           {/* Resultado del test */}
           {testResult && (
             <div className="mt-6">
-              <Alert className={testResult.success ? 'border-green-500 bg-green-50' : 'border-red-500 bg-red-50'}>
+              <Alert className={`border-2 ${testResult.success 
+                ? 'border-green-500 bg-green-50 text-green-900' 
+                : 'border-red-500 bg-red-50 text-red-900'
+              }`}>
                 {testResult.success ? (
-                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  <CheckCircle2 className="h-5 w-5 text-green-600" />
                 ) : (
-                  <XCircle className="h-4 w-4 text-red-600" />
+                  <XCircle className="h-5 w-5 text-red-600" />
                 )}
-                <AlertDescription className={testResult.success ? 'text-green-800' : 'text-red-800'}>
-                  <div className="font-medium mb-2">{testResult.message}</div>
+                <AlertDescription>
+                  <div className="font-semibold text-base mb-3">{testResult.message}</div>
                   {testResult.details && (
-                    <div className="space-y-1 text-sm">
-                      <div className="flex items-center gap-2">
-                        <Badge variant={testResult.details.apiKeyValid ? 'default' : 'destructive'}>
-                          API Key: {testResult.details.apiKeyValid ? 'Válida' : 'Inválida'}
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <Badge 
+                          variant={testResult.details.apiKeyValid ? 'default' : 'destructive'}
+                          className={`px-3 py-1 ${testResult.details.apiKeyValid 
+                            ? 'bg-green-100 text-green-800 border-green-300' 
+                            : 'bg-red-100 text-red-800 border-red-300'
+                          }`}
+                        >
+                          API Key: {testResult.details.apiKeyValid ? '✅ Válida' : '❌ Inválida'}
                         </Badge>
-                        <Badge variant={testResult.details.phoneIdValid ? 'default' : 'destructive'}>
-                          Phone ID: {testResult.details.phoneIdValid ? 'Válido' : 'Inválido'}
+                        <Badge 
+                          variant={testResult.details.phoneIdValid ? 'default' : 'destructive'}
+                          className={`px-3 py-1 ${testResult.details.phoneIdValid 
+                            ? 'bg-green-100 text-green-800 border-green-300' 
+                            : 'bg-red-100 text-red-800 border-red-300'
+                          }`}
+                        >
+                          Phone ID: {testResult.details.phoneIdValid ? '✅ Válido' : '❌ Inválido'}
                         </Badge>
                       </div>
                       {testResult.details.voicesAvailable > 0 && (
-                        <p>Voces disponibles: {testResult.details.voicesAvailable}</p>
+                        <div className="bg-blue-50 border border-blue-200 rounded-md p-2 mt-2">
+                          <p className="text-blue-800 font-medium">
+                            🎵 Voces disponibles: {testResult.details.voicesAvailable}
+                          </p>
+                        </div>
                       )}
                     </div>
                   )}

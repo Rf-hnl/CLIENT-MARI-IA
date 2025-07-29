@@ -96,6 +96,7 @@ export interface IElevenLabsConnectionTest {
     voicesAvailable: number;
     rateLimitRemaining: number;
   };
+  voices?: IElevenLabsVoice[];
   error?: string;
 }
 

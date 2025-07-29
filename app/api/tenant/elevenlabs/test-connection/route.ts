@@ -104,6 +104,27 @@ export async function POST(request: NextRequest) {
       testResults.phoneIdValid = false;
     }
 
+    // Obtener voces si el test fue exitoso
+    let voices: IElevenLabsVoice[] = [];
+    if (testResults.apiKeyValid) {
+      try {
+        const voicesResponse = await fetch(`${config.apiUrl}/v1/voices`, {
+          method: 'GET',
+          headers: {
+            'xi-api-key': config.apiKey,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (voicesResponse.ok) {
+          const voicesData = await voicesResponse.json();
+          voices = voicesData.voices || [];
+        }
+      } catch (voicesError) {
+        console.error('[TEST ELEVENLABS] Error fetching voices:', voicesError);
+      }
+    }
+
     // Determinar el resultado general
     const allTestsPassed = testResults.apiKeyValid && testResults.phoneIdValid;
 
@@ -112,7 +133,8 @@ export async function POST(request: NextRequest) {
       message: allTestsPassed 
         ? 'Conexión exitosa con ElevenLabs' 
         : 'Algunos tests fallaron',
-      details: testResults
+      details: testResults,
+      voices: voices
     };
 
     if (!allTestsPassed) {

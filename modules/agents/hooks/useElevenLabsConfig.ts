@@ -145,24 +145,41 @@ export const useElevenLabsConfig = ({ tenantId, uid }: UseElevenLabsConfigProps)
   }) => {
     if (!tenantId) throw new Error('tenantId es requerido');
 
+    console.log('🔄 [HOOK] Iniciando testConnection para tenant:', tenantId);
     setTesting(true);
     setError(null);
 
     try {
+      console.log('📡 [HOOK] Enviando request a API...');
       const response = await fetch('/api/tenant/elevenlabs/test-connection', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tenantId, testConfig })
       });
 
+      console.log('📨 [HOOK] Response status:', response.status);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
       const result: IElevenLabsConnectionTest = await response.json();
+      console.log('🎯 [HOOK] Resultado:', result);
+      
+      // Si el test incluye voces, guardarlas
+      if (result.voices && result.voices.length > 0) {
+        console.log('🎵 [HOOK] Guardando voces del test:', result.voices.length);
+        setVoices(result.voices);
+      }
+      
       return result;
     } catch (err) {
+      console.error('🚨 [HOOK] Error en testConnection:', err);
       const errorMessage = err instanceof Error ? err.message : 'Error de conexión';
       setError(errorMessage);
       throw err;
     } finally {
       setTesting(false);
+      console.log('🔚 [HOOK] testConnection finalizado');
     }
   }, [tenantId]);
 
