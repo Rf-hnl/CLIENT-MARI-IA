@@ -128,6 +128,7 @@ export function formatClientForMCP(client: IClient, selectedAction?: string) {
     }
   });
 
+  console.log('🔍 Formatter - Final formatted phone number:', formattedData.phone); // Add this line
   return formattedData;
 }
 

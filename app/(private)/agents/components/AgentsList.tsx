@@ -57,7 +57,7 @@ export function AgentsList({ onEditAgent }: AgentsListProps) {
   // Filtrar agentes
   const filteredAgents = agents.filter(agent => {
     const matchesSearch = agent.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         agent.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (agent.description ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
                          agent.metadata.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
     
     const matchesStatus = filterStatus === 'all' || 
@@ -115,7 +115,7 @@ export function AgentsList({ onEditAgent }: AgentsListProps) {
   };
 
   const hasVoiceConfigured = (agent: ITenantElevenLabsAgent) => {
-    const voiceId = agent.elevenLabsConfig?.voice?.voiceId || agent.elevenLabsData?.conversation_config?.tts?.voice_id;
+    const voiceId = agent.elevenLabsData?.conversation_config?.tts?.voice_id;
     return voiceId && voiceId.trim() !== '';
   };
 
@@ -233,6 +233,10 @@ export function AgentsList({ onEditAgent }: AgentsListProps) {
 
                   <TableCell>
                     {getStatusBadge(agent.metadata.isActive)}
+                  </TableCell>
+
+                  <TableCell>
+                    {getVoiceStatusBadge(agent)}
                   </TableCell>
 
                   <TableCell>

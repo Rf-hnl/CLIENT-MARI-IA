@@ -46,11 +46,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const clientData = clientDoc.data();
+    const clientDocData = clientDoc.data();
     
-    // Los datos del cliente están directamente en el documento, no en _data
-    const client = { id: clientId, ...clientData } as IClient;
+    // Los datos del cliente están anidados en la propiedad '_data'
+    const client = { id: clientId, ...clientDocData._data } as IClient;
 
+    console.log(`🔍 Client phone number from Firebase: ${client.phone}`); // Add this line
     console.log(`🚀 Starting WhatsApp conversation for client: ${client.name} (${clientId})`);
     console.log(`🎯 Selected action: ${action || 'No action specified'}`);
 
