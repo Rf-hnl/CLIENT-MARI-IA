@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useClients } from '@/modules/clients/hooks/useClients';
 import { IClient } from '@/modules/clients/types/clients';
+import { ExtendedClient } from '@/modules/clients/context/ClientsContext';
+import { ClientMigrationBadge } from '@/components/clients/ClientMigrationBadge';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -26,7 +28,7 @@ const InfoRow = ({ label, value, children }: { label: string; value?: string | n
 const ClientDetailsPage = () => {
   const params = useParams();
   const router = useRouter();
-  const [client, setClient] = useState<IClient | null>(null);
+  const [client, setClient] = useState<ExtendedClient | null>(null);
   const { clients, isLoading } = useClients();
 
   useEffect(() => {
@@ -75,7 +77,10 @@ const ClientDetailsPage = () => {
         <Button variant="ghost" size="icon" onClick={() => router.back()}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <h1 className="text-2xl font-bold">Detalles del Cliente</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-bold">Detalles del Cliente</h1>
+          {client && <ClientMigrationBadge client={client} variant="minimal" />}
+        </div>
       </div>
       <Tabs defaultValue="personal" className="w-full">
         <TabsList className="mb-4">
