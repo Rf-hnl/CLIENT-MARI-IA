@@ -40,7 +40,7 @@ export default function ProfileForm({ onProfileUpdated }: ProfileFormProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const userProfile = currentUser ? createUserProfileFromFirebaseUser(currentUser) : null;
-  const formData = userProfile ? createFormDataFromProfile(userProfile) : null;
+  const formData = currentUser ? createFormDataFromProfile(currentUser) : null;
 
   const form = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
