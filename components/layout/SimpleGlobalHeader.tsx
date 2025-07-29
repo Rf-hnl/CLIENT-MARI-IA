@@ -19,6 +19,7 @@ import {
   Bell,
   User,
   LogOut,
+  Database,
 } from 'lucide-react';
 import { useAuth } from '@/modules/auth';
 import { getCurrentUserData, getCurrentOrganization } from '@/lib/auth/userState';
@@ -59,6 +60,26 @@ export default function SimpleGlobalHeader({ className = '' }: SimpleGlobalHeade
   const displayName = userData.firestoreUser?.displayName || currentUser.email || 'Usuario';
   const userInitials = displayName.split(' ').map((n: string) => n[0]).join('').toUpperCase();
 
+  const handleDatabaseDebug = async () => {
+    try {
+      console.log('🔍 Testing Firebase Admin DB connection...');
+      const response = await fetch('/api/debug/database-analysis');
+      const result = await response.json();
+      
+      if (result.success) {
+        console.log('✅ Firebase Admin DB connected successfully');
+        console.log('Total documents:', result.totalDocuments);
+        console.log('Collection counts (tree-formatted):', JSON.stringify(result.collectionCounts, null, 2));
+        console.log('Connection: Has documents');
+        console.log('Database Tree Structure (nested):', JSON.stringify(result.data, null, 2));
+      } else {
+        console.error('❌ Firebase Admin DB error:', result.error);
+      }
+    } catch (error) {
+      console.error('❌ API call failed:', error);
+    }
+  };
+
   return (
     <header className={`flex h-16 shrink-0 items-center gap-2 px-4 ${className}`}>
       <SidebarTrigger className="-ml-1" />
@@ -73,6 +94,16 @@ export default function SimpleGlobalHeader({ className = '' }: SimpleGlobalHeade
       </div>
 
       <div className="flex-1" />
+
+      {/* Database Debug Button */}
+      <Button 
+        variant="ghost" 
+        size="sm" 
+        onClick={handleDatabaseDebug}
+        title="Debug Base de Datos"
+      >
+        <Database className="h-4 w-4" />
+      </Button>
 
       {/* Notifications */}
       <Button variant="ghost" size="sm">

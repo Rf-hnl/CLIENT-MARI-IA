@@ -4,6 +4,7 @@ import "./globals.css";
 import { AuthProvider } from "@/modules/auth";
 import { DashboardLayout } from "@/components/layouts/DashboardLayout";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
+import { ClientsProvider } from "@/modules/clients/context/ClientsContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -16,8 +17,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Auth Module - Client Mar-IA",
-  description: "Authentication module with Firebase",
+  title: "Client Mar-IA",
+  description: "Sistema de gestión de clientes y cobranza",
+  icons: {
+    icon: "/favicon.png",
+    shortcut: "/favicon.png",
+    apple: "/favicon.png",
+  },
 };
 
 export default function RootLayout({
@@ -37,9 +43,11 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <AuthProvider>
-            <DashboardLayout>
-              {children}
-            </DashboardLayout>
+            <ClientsProvider>
+              <DashboardLayout>
+                {children}
+              </DashboardLayout>
+            </ClientsProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>
