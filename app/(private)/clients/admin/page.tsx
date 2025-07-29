@@ -16,6 +16,7 @@ import {
   TableRow 
 } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import { 
   MoreHorizontal, 
   Search, 
@@ -23,6 +24,9 @@ import {
   Phone,
   Mail,
   MapPin,
+  Download,
+  Trash2,
+  Users,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -36,8 +40,15 @@ import { safeFormatDate } from '@/utils/dateFormat';
 import { 
   validateClientData
 } from '@/modules/clients/utils/clientValidation';
+import { 
+  formatClientStatus, 
+  formatRiskCategory, 
+  calculateClientMetrics 
+} from '@/modules/clients/admin';
 import ContactActionsModal from '@/components/clients/ContactActionsModal';
 import { NewClientModal } from '@/components/clients/NewClientModal';
+import { DeleteClientModal } from '@/components/clients/DeleteClientModal';
+import { BulkDeleteModal } from '@/components/clients/BulkDeleteModal';
 
 
 export default function ClientsAdmin() {
@@ -46,23 +57,68 @@ export default function ClientsAdmin() {
   const { clients, isLoading, error, currentOrganization, currentTenant, refetch } = useClients();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [selectedClients, setSelectedClients] = useState<string[]>([]);
+  const [riskFilter, setRiskFilter] = useState<string>('all');
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
 
-  // Filtrar clientes
+  // Filtrar clientes con filtros mejorados
   const filteredClients = clients.filter(client => {
     const matchesSearch = client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (client.email ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         client.phone.includes(searchTerm);
+                         client.phone.includes(searchTerm) ||
+                         client.national_id.includes(searchTerm);
     
     const matchesStatus = statusFilter === 'all' || client.status === statusFilter;
+    const matchesRisk = riskFilter === 'all' || client.risk_category === riskFilter;
     
-    return matchesSearch && matchesStatus;
+    return matchesSearch && matchesStatus && matchesRisk;
   });
 
-  // Calcular estadísticas
-  const totalClients = clients.length;
-  const activeClients = clients.filter(c => c.status === 'current').length;
-  const overdueClients = clients.filter(c => c.status === 'overdue').length;
-  const uniqueTags = [...new Set(clients.flatMap(c => c.tags))].length;
+  // Funciones para selección masiva
+  const handleSelectAll = () => {
+    if (selectedClients.length === filteredClients.length) {
+      setSelectedClients([]);
+    } else {
+      setSelectedClients(filteredClients.map(c => c.id));
+    }
+  };
+
+  const handleSelectClient = (clientId: string) => {
+    setSelectedClients(prev => 
+      prev.includes(clientId) 
+        ? prev.filter(id => id !== clientId)
+        : [...prev, clientId]
+    );
+  };
+
+  // Función para abrir modal de eliminación masiva
+  const handleBulkDelete = () => {
+    if (selectedClients.length === 0) return;
+    setShowBulkDeleteModal(true);
+  };
+
+  // Obtener clientes seleccionados completos para el modal
+  const selectedClientsData = filteredClients.filter(client => 
+    selectedClients.includes(client.id)
+  );
+
+  // Función para manejar eliminación exitosa
+  const handleBulkDeleteSuccess = () => {
+    setSelectedClients([]);
+    // No cerrar el modal aquí, dejar que se cierre solo
+  };
+
+  // Calcular estadísticas usando función del módulo admin
+  const metrics = calculateClientMetrics(clients);
+  const {
+    total: totalClients,
+    current: activeClients,
+    overdue: overdueClients,
+    uniqueTags,
+    totalDebt,
+    avgDebt,
+    highRisk
+  } = metrics;
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -177,8 +233,8 @@ export default function ClientsAdmin() {
         </div>
       </div>
 
-      {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      {/* Quick Stats - Enhanced */}
+      <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
         <div className="bg-card rounded-lg border p-4">
           <div className="flex items-center gap-2">
             <div className="h-8 w-8 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -217,6 +273,34 @@ export default function ClientsAdmin() {
         
         <div className="bg-card rounded-lg border p-4">
           <div className="flex items-center gap-2">
+            <div className="h-8 w-8 bg-orange-100 rounded-lg flex items-center justify-center">
+              <span className="text-orange-600 font-semibold text-sm">{highRisk}</span>
+            </div>
+            <div>
+              <p className="text-sm font-medium">Alto Riesgo</p>
+              <p className="text-xs text-muted-foreground">Requieren atención</p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-card rounded-lg border p-4">
+          <div className="flex items-center gap-2">
+            <div className="h-8 w-8 bg-purple-100 rounded-lg flex items-center justify-center">
+              <span className="text-purple-600 font-semibold text-xs">
+                ${Math.round(totalDebt / 1000)}K
+              </span>
+            </div>
+            <div>
+              <p className="text-sm font-medium">Deuda Total</p>
+              <p className="text-xs text-muted-foreground">
+                Prom: ${Math.round(avgDebt).toLocaleString()}
+              </p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-card rounded-lg border p-4">
+          <div className="flex items-center gap-2">
             <div className="h-8 w-8 bg-amber-100 rounded-lg flex items-center justify-center">
               <span className="text-amber-600 font-semibold text-sm">{uniqueTags}</span>
             </div>
@@ -242,17 +326,19 @@ export default function ClientsAdmin() {
             <div className="relative flex-1">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Buscar por nombre, email o teléfono..."
+                placeholder="Buscar por nombre, email, teléfono o cédula..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-8"
               />
             </div>
+            
+            {/* Filtro de Estado */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline">
                   <Filter className="h-4 w-4 mr-2" />
-                  Estado: {statusFilter === 'all' ? 'Todos' : statusFilter}
+                  Estado: {statusFilter === 'all' ? 'Todos' : formatClientStatus(statusFilter)}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent>
@@ -270,13 +356,82 @@ export default function ClientsAdmin() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+
+            {/* Filtro de Riesgo */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">
+                  <Filter className="h-4 w-4 mr-2" />
+                  Riesgo: {riskFilter === 'all' ? 'Todos' : formatRiskCategory(riskFilter)}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onClick={() => setRiskFilter('all')}>
+                  Todos
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setRiskFilter('bajo')}>
+                  Bajo
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setRiskFilter('medio')}>
+                  Medio
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setRiskFilter('alto')}>
+                  Alto
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
+
+          {/* Bulk Actions */}
+          {selectedClients.length > 0 && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-blue-600" />
+                  <span className="text-sm font-medium text-blue-800">
+                    {selectedClients.length} cliente{selectedClients.length > 1 ? 's' : ''} seleccionado{selectedClients.length > 1 ? 's' : ''}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button size="sm" variant="outline">
+                    <Download className="h-4 w-4 mr-1" />
+                    Exportar
+                  </Button>
+                  <Button size="sm" variant="outline">
+                    Contacto Masivo
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="text-red-600 border-red-200 hover:bg-red-50"
+                    onClick={handleBulkDelete}
+                  >
+                    <Trash2 className="h-4 w-4 mr-1" />
+                    Eliminar
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="ghost" 
+                    onClick={() => setSelectedClients([])}
+                  >
+                    Cancelar
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
         </CardHeader>
         
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-12">
+                  <Checkbox 
+                    checked={selectedClients.length === filteredClients.length && filteredClients.length > 0}
+                    onCheckedChange={handleSelectAll}
+                  />
+                </TableHead>
                 <TableHead>Cliente</TableHead>
                 <TableHead>Creación/ID</TableHead>
                 <TableHead>Contacto</TableHead>
@@ -293,6 +448,12 @@ export default function ClientsAdmin() {
                 const validation = validateClientData(client);
                 return (
                 <TableRow key={client.id}>
+                  <TableCell>
+                    <Checkbox 
+                      checked={selectedClients.includes(client.id)}
+                      onCheckedChange={() => handleSelectClient(client.id)}
+                    />
+                  </TableCell>
                   <TableCell>
                     <div className="flex flex-col">
                       <p className="font-medium uppercase">{client.name}</p>
@@ -405,7 +566,7 @@ export default function ClientsAdmin() {
                         size="sm" 
                         onClick={() => router.push(`/clients/${client.id}`)}
                       >
-                        Ver Detalles
+                        Detalles/Editar
                       </Button>
                       <ContactActionsModal client={client} />
                       
@@ -417,11 +578,27 @@ export default function ClientsAdmin() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Otras Acciones</DropdownMenuLabel>
-                          <DropdownMenuItem>Editar Cliente</DropdownMenuItem>
                           <DropdownMenuItem>Historial Completo</DropdownMenuItem>
+                          <DropdownMenuItem>Exportar Datos</DropdownMenuItem>
+                          <DropdownMenuItem>Duplicar Cliente</DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-rose-600">
-                            Eliminar Cliente
+                          <DropdownMenuItem 
+                            className="text-rose-600"
+                            onClick={(e) => e.preventDefault()}
+                          >
+                            <DeleteClientModal 
+                              client={client}
+                              trigger={
+                                <span className="flex items-center w-full cursor-pointer">
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Eliminar Cliente
+                                </span>
+                              }
+                              onDeleted={() => {
+                                // Opcional: mostrar notificación de éxito
+                                console.log('Cliente eliminado exitosamente');
+                              }}
+                            />
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -442,6 +619,14 @@ export default function ClientsAdmin() {
           )}
         </CardContent>
       </Card>
+
+      {/* Modal de eliminación masiva */}
+      <BulkDeleteModal
+        selectedClients={selectedClientsData}
+        isOpen={showBulkDeleteModal}
+        onClose={() => setShowBulkDeleteModal(false)}
+        onDeleted={handleBulkDeleteSuccess}
+      />
     </div>
   );
 }

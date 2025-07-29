@@ -12,12 +12,13 @@ export { useClients } from '../context/ClientsContext';
 
 // Hook específico para administración de clientes
 export function useClientsAdmin() {
-  const { addClient, updateClient, deleteClient, isLoading, error } = useClientsContext();
+  const { addClient, updateClient, deleteClient, bulkDeleteClients, isLoading, error } = useClientsContext();
   
   return {
     addClient,
     updateClient,
     deleteClient,
+    bulkDeleteClients,
     isLoading,
     error,
   };

@@ -28,6 +28,7 @@ interface ClientsContextType {
   addClient: (clientData: Omit<IClient, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
   updateClient: (id: string, updates: Partial<IClient>) => Promise<void>;
   deleteClient: (id: string) => Promise<void>;
+  bulkDeleteClients: (clientIds: string[]) => Promise<void>;
   // New methods for customer interactions
   getClientInteractions: (clientId: string) => ICustomerInteractions | undefined;
   // Migration methods
@@ -186,15 +187,109 @@ export function ClientsProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteClient = async (id: string) => {
+    if (!currentUser || !currentOrganization || !currentTenant) {
+      throw new Error('Usuario, organización o tenant no disponible');
+    }
+
     setIsLoading(true);
     setError(null);
+    
     try {
-      // TODO: Implementar con Firebase API
-      console.log('Deleting client:', id);
-      // Por ahora solo refrescamos los datos
-      await fetchClients();
+      // Preparar datos para eliminación
+      const deleteData = {
+        uid: currentUser.uid,
+        organizationId: currentOrganization.id,
+        tenantId: currentTenant.id,
+        clientId: id
+      };
+
+      console.log('Deleting client with data:', deleteData);
+
+      // Llamada a API para eliminar cliente
+      const response = await fetch('/api/client/admin/delete', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(deleteData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Error ${response.status}: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      console.log('Client deleted successfully:', result);
+
+      // Actualizar estado local removiendo el cliente eliminado
+      setClients(prevClients => prevClients.filter(client => client.id !== id));
+      
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error deleting client');
+      console.error('Error deleting client:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Error eliminando cliente';
+      setError(errorMessage);
+      throw err; // Re-throw para que el modal pueda manejarlo
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const bulkDeleteClients = async (clientIds: string[]) => {
+    if (!currentUser || !currentOrganization || !currentTenant) {
+      throw new Error('Usuario, organización o tenant no disponible');
+    }
+
+    if (clientIds.length === 0) {
+      throw new Error('No se proporcionaron IDs de clientes para eliminar');
+    }
+
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const deleteData = {
+        uid: currentUser.uid,
+        organizationId: currentOrganization.id,
+        tenantId: currentTenant.id,
+        clientIds
+      };
+
+      console.log('Bulk deleting clients with data:', deleteData);
+      console.log(`Attempting to delete ${clientIds.length} clients:`, clientIds);
+
+      const response = await fetch('/api/client/admin/bulk-delete', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(deleteData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Error ${response.status}: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      console.log('Bulk delete completed:', result);
+
+      // Actualizar estado local removiendo todos los clientes eliminados exitosamente
+      if (result.results) {
+        const successfullyDeletedIds = result.results
+          .filter((r: any) => r.success)
+          .map((r: any) => r.clientId);
+        
+        setClients(prevClients => 
+          prevClients.filter(client => !successfullyDeletedIds.includes(client.id))
+        );
+      }
+      
+    } catch (err) {
+      console.error('Error in bulk delete:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Error en eliminación masiva';
+      setError(errorMessage);
+      throw err;
     } finally {
       setIsLoading(false);
     }
@@ -320,6 +415,7 @@ export function ClientsProvider({ children }: { children: React.ReactNode }) {
     addClient,
     updateClient,
     deleteClient,
+    bulkDeleteClients,
     getClientInteractions,
     getClientsWithoutInteractions,
     migrateClient,
