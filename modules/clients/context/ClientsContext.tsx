@@ -30,6 +30,10 @@ interface ClientsContextType {
   deleteClient: (id: string) => Promise<void>;
   // New methods for customer interactions
   getClientInteractions: (clientId: string) => ICustomerInteractions | undefined;
+  // Migration methods
+  getClientsWithoutInteractions: () => ExtendedClient[];
+  migrateClient: (clientId: string) => Promise<void>;
+  migrateAllClients: () => Promise<void>;
 }
 
 const ClientsContext = createContext<ClientsContextType | undefined>(undefined);
@@ -202,6 +206,110 @@ export function ClientsProvider({ children }: { children: React.ReactNode }) {
     return client?.customerInteractions;
   };
 
+  // Function to get clients without customerInteractions (need migration)
+  const getClientsWithoutInteractions = (): ExtendedClient[] => {
+    return clients.filter(client => !client.customerInteractions);
+  };
+
+  // Function to migrate a single client
+  const migrateClient = async (clientId: string): Promise<void> => {
+    if (!currentOrganization || !currentTenant) {
+      throw new Error('No hay organización o tenant disponible para la migración');
+    }
+
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const response = await fetch('/api/client/migrate/single', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          tenantId: currentTenant.id,
+          organizationId: currentOrganization.id,
+          clientId,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error || 'Error desconocido al migrar el cliente');
+      }
+
+      console.log(`✅ Cliente ${clientId} migrado exitosamente`);
+      
+      // Refresh the clients list
+      await fetchClients();
+      
+    } catch (err) {
+      console.error('Error migrando cliente:', err);
+      setError(err instanceof Error ? err.message : 'Error migrating client');
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Function to migrate all clients without interactions
+  const migrateAllClients = async (): Promise<void> => {
+    if (!currentOrganization || !currentTenant) {
+      throw new Error('No hay organización o tenant disponible para la migración');
+    }
+
+    const clientsToMigrate = getClientsWithoutInteractions();
+    
+    if (clientsToMigrate.length === 0) {
+      console.log('📋 No hay clientes que requieran migración');
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const response = await fetch('/api/client/migrate/batch', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          tenantId: currentTenant.id,
+          organizationId: currentOrganization.id,
+          clientIds: clientsToMigrate.map(c => c.id),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error || 'Error desconocido al migrar los clientes');
+      }
+
+      console.log(`✅ ${data.migratedCount} clientes migrados exitosamente`);
+      
+      // Refresh the clients list
+      await fetchClients();
+      
+    } catch (err) {
+      console.error('Error migrando clientes:', err);
+      setError(err instanceof Error ? err.message : 'Error migrating clients');
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const value: ClientsContextType = {
     clients,
     isLoading,
@@ -213,6 +321,9 @@ export function ClientsProvider({ children }: { children: React.ReactNode }) {
     updateClient,
     deleteClient,
     getClientInteractions,
+    getClientsWithoutInteractions,
+    migrateClient,
+    migrateAllClients,
   };
 
   return (
