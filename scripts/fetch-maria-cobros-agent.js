@@ -3,22 +3,48 @@
  * Este script hace fetch a los APIs internos para obtener el prompt y configuración
  */
 
-const BASE_URL = 'http://localhost:3000'; // Ajusta según tu setup
+const BASE_URL = 'http://localhost:3002'; // Puerto donde está corriendo el servidor
 
 async function fetchMariaCobrousAgent() {
   try {
     console.log('🔍 [SCRIPT] Buscando agente MAR-IA COBROS...\n');
 
     // 1. Obtener lista de agentes para encontrar MAR-IA COBROS
-    console.log('📋 [STEP 1] Obteniendo lista de agentes...');
-    const listResponse = await fetch(`${BASE_URL}/api/tenant/agents/elevenlabs/list?tenantId=test-tenant&lightweight=false`);
+    // Probar diferentes tenant IDs comunes
+    const tenantIds = ['default', 'main', 'mar-ia', 'maria', 'cobros', 'tenant1', 'demo', 'test'];
     
-    if (!listResponse.ok) {
-      throw new Error(`Error al obtener lista de agentes: ${listResponse.status}`);
+    console.log('📋 [STEP 1] Probando diferentes tenant IDs...');
+    let listData = null;
+    let workingTenantId = null;
+    
+    for (const tenantId of tenantIds) {
+      console.log(`   Probando tenant: ${tenantId}`);
+      try {
+        const listResponse = await fetch(`${BASE_URL}/api/tenant/agents/elevenlabs/list?tenantId=${tenantId}&lightweight=false`);
+        
+        if (listResponse.ok) {
+          const data = await listResponse.json();
+          if (data.success && data.total > 0) {
+            console.log(`   ✅ Encontrado tenant con agentes: ${tenantId} (${data.total} agentes)`);
+            listData = data;
+            workingTenantId = tenantId;
+            break;
+          } else {
+            console.log(`   - Tenant ${tenantId}: sin agentes`);
+          }
+        } else {
+          console.log(`   - Tenant ${tenantId}: error ${listResponse.status}`);
+        }
+      } catch (error) {
+        console.log(`   - Tenant ${tenantId}: error de conexión`);
+      }
     }
-
-    const listData = await listResponse.json();
-    console.log(`✅ [STEP 1] Encontrados ${listData.total} agentes\n`);
+    
+    if (!listData) {
+      console.log('❌ No se encontraron agentes en ningún tenant');
+      return;
+    }
+    console.log(`✅ [STEP 1] Encontrados ${listData.total} agentes en tenant: ${workingTenantId}\n`);
 
     // 2. Buscar el agente que contenga "MAR-IA" o "COBROS" en el nombre
     let mariaAgent = null;
@@ -58,7 +84,7 @@ async function fetchMariaCobrousAgent() {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        tenantId: 'test-tenant', // Ajusta según tu tenant
+        tenantId: workingTenantId,
         agentId: mariaAgent.elevenLabsConfig?.agentId
       })
     });

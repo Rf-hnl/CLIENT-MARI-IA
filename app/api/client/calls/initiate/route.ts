@@ -18,6 +18,58 @@ interface InitiateCallRequestBody {
   callType: string;   // e.g. "overdue_payment"
 }
 
+// Función helper para guardar callLogs
+async function saveCallLog(clientRef: admin.firestore.DocumentReference, callLog: ICallLog) {
+  console.log('📝 [SAVE_CALL_LOG] Guardando callLog:', JSON.stringify(callLog, null, 2));
+
+  // Obtener documento actual
+  const clientLatestSnap = await clientRef.get();
+  const clientDocumentData = clientLatestSnap.data();
+  
+  console.log('📄 [CLIENT_DOC] Estructura del documento cliente:');
+  console.log('- Existe documento:', clientLatestSnap.exists);
+  console.log('- Tiene _data:', !!clientDocumentData?._data);
+  console.log('- Tiene customerInteractions:', !!clientDocumentData?.customerInteractions);
+  console.log('- CallLogs existentes:', clientDocumentData?.customerInteractions?.callLogs?.length || 0);
+
+  const existing = clientDocumentData?.customerInteractions?.callLogs as ICallLog[] || [];
+  const updatedCallLogs = [...existing, callLog];
+
+  console.log('🔄 [UPDATE] Actualizando con', updatedCallLogs.length, 'callLogs total');
+
+  // Si no existe customerInteractions, necesitamos inicializarlo
+  const updateData: any = {
+    updatedAt: admin.firestore.FieldValue.serverTimestamp()
+  };
+
+  if (!clientDocumentData?.customerInteractions) {
+    console.log('🆕 [INIT] Inicializando customerInteractions por primera vez');
+    updateData.customerInteractions = {
+      callLogs: updatedCallLogs,
+      emailRecords: [],
+      clientAIProfiles: null
+    };
+  } else {
+    updateData['customerInteractions.callLogs'] = updatedCallLogs;
+  }
+
+  await clientRef.update(updateData);
+
+  // Verificar que se guardó correctamente
+  const verificationSnap = await clientRef.get();
+  const verificationData = verificationSnap.data();
+  const savedCallLogs = verificationData?.customerInteractions?.callLogs || [];
+  const foundLog = savedCallLogs.find((log: ICallLog) => log.id === callLog.id);
+
+  if (foundLog) {
+    console.log('✅ [SAVE_SUCCESS] CallLog guardado y verificado exitosamente con ID:', callLog.id);
+    console.log('📊 [VERIFICATION] Total callLogs en documento:', savedCallLogs.length);
+  } else {
+    console.error('❌ [SAVE_ERROR] CallLog NO se encontró después del guardado!');
+    console.error('📄 [DEBUG] Datos guardados:', JSON.stringify(savedCallLogs, null, 2));
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     // 1. Parsear body y validar
@@ -109,8 +161,7 @@ export async function POST(request: NextRequest) {
       call_name: `${callType} - ${clientData.name} - ${new Date().toISOString()}`,
       agent_id: elevenLabsAgentId,
       agent_phone_number_id: elevenLabsConfig.phoneId,
-      scheduled_time_unix: 1,  // Lanza la llamada ya 
-      // scheduled_time_unix: Math.floor(Date.now() / 1000),  // Lanza la llamada ya
+      scheduled_time_unix: Math.floor(Date.now() / 1000),  // Lanza la llamada inmediatamente
       recipients: [
         {
           phone_number: formatPanamaPhone(clientData.phone),
@@ -183,6 +234,28 @@ export async function POST(request: NextRequest) {
 
     if (!response.ok) {
       const err = await response.json();
+      
+      // Guardar llamada fallida en callLogs
+      const failedCallLog: ICallLog = {
+        id: `failed_${Date.now()}_${clientId}`,
+        clientId,
+        timestamp: admin.firestore.FieldValue.serverTimestamp() as any,
+        callType,
+        durationMinutes: 0,
+        agentId: localAgent.id,
+        outcome: 'failed',
+        audioUrl: '',
+        transcription: '',
+        elevenLabsJobId: '',
+        transcriptionStatus: 'failed',
+        notes: `Error ElevenLabs (${response.status}): ${JSON.stringify(err)}`
+      };
+
+      console.log('❌ [FAILED_CALL] Guardando llamada fallida:', JSON.stringify(failedCallLog, null, 2));
+      
+      // Guardar la llamada fallida
+      await saveCallLog(clientRef, failedCallLog);
+      
       return NextResponse.json(
         {
           success: false,
@@ -196,6 +269,27 @@ export async function POST(request: NextRequest) {
     const result = await response.json();
     const callId = result.id; // Cambió de call_id a id según la nueva documentación
     if (!callId) {
+      // Guardar llamada fallida por falta de ID
+      const failedCallLog: ICallLog = {
+        id: `no_id_${Date.now()}_${clientId}`,
+        clientId,
+        timestamp: admin.firestore.FieldValue.serverTimestamp() as any,
+        callType,
+        durationMinutes: 0,
+        agentId: localAgent.id,
+        outcome: 'failed',
+        audioUrl: '',
+        transcription: '',
+        elevenLabsJobId: '',
+        transcriptionStatus: 'failed',
+        notes: 'ElevenLabs no devolvió el ID de la llamada'
+      };
+
+      console.log('❌ [NO_ID_CALL] Guardando llamada sin ID:', JSON.stringify(failedCallLog, null, 2));
+      
+      // Guardar la llamada fallida
+      await saveCallLog(clientRef, failedCallLog);
+      
       return NextResponse.json(
         {
           success: false,
@@ -220,54 +314,8 @@ export async function POST(request: NextRequest) {
       transcriptionStatus: 'pending'
     };
 
-    console.log('📝 [CALL_LOG] Guardando callLog:', JSON.stringify(callLog, null, 2));
-
-    // Actualizar el array de callLogs
-    const clientLatestSnap = await clientRef.get();
-    const clientDocumentData = clientLatestSnap.data();
-    
-    console.log('📄 [CLIENT_DOC] Estructura del documento cliente:');
-    console.log('- Existe documento:', clientLatestSnap.exists);
-    console.log('- Tiene _data:', !!clientDocumentData?._data);
-    console.log('- Tiene customerInteractions:', !!clientDocumentData?.customerInteractions);
-    console.log('- CallLogs existentes:', clientDocumentData?.customerInteractions?.callLogs?.length || 0);
-
-    const existing = clientDocumentData?.customerInteractions?.callLogs as ICallLog[] || [];
-    const updatedCallLogs = [...existing, callLog];
-
-    console.log('🔄 [UPDATE] Actualizando con', updatedCallLogs.length, 'callLogs total');
-
-    // Si no existe customerInteractions, necesitamos inicializarlo
-    const updateData: any = {
-      updatedAt: admin.firestore.FieldValue.serverTimestamp()
-    };
-
-    if (!clientDocumentData?.customerInteractions) {
-      console.log('🆕 [INIT] Inicializando customerInteractions por primera vez');
-      updateData.customerInteractions = {
-        callLogs: updatedCallLogs,
-        emailRecords: [],
-        clientAIProfiles: null
-      };
-    } else {
-      updateData['customerInteractions.callLogs'] = updatedCallLogs;
-    }
-
-    await clientRef.update(updateData);
-
-    // Verificar que se guardó correctamente
-    const verificationSnap = await clientRef.get();
-    const verificationData = verificationSnap.data();
-    const savedCallLogs = verificationData?.customerInteractions?.callLogs || [];
-    const foundLog = savedCallLogs.find((log: ICallLog) => log.id === callId);
-
-    if (foundLog) {
-      console.log('✅ [SAVE_SUCCESS] CallLog guardado y verificado exitosamente con ID:', callId);
-      console.log('📊 [VERIFICATION] Total callLogs en documento:', savedCallLogs.length);
-    } else {
-      console.error('❌ [SAVE_ERROR] CallLog NO se encontró después del guardado!');
-      console.error('📄 [DEBUG] Datos guardados:', JSON.stringify(savedCallLogs, null, 2));
-    }
+    // Guardar usando la función helper
+    await saveCallLog(clientRef, callLog);
 
     return NextResponse.json({
       success: true,
@@ -276,6 +324,43 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error al iniciar llamada:', error);
+    
+    // Intentar guardar el error si tenemos suficiente información
+    try {
+      const body = await request.clone().json();
+      const { clientId, tenantId, organizationId, agentId, callType } = body;
+      
+      if (clientId && tenantId && organizationId && agentId && callType) {
+        const clientPath = `tenants/${tenantId}/organizations/${organizationId}/clients/${clientId}`;
+        const clientRef = adminDb.doc(clientPath);
+        
+        // Obtener el agente para el log
+        const agentPath = `tenants/${tenantId}/elevenlabs-agents/${agentId}`;
+        const agentSnap = await adminDb.doc(agentPath).get();
+        const localAgent = agentSnap.data() as ITenantElevenLabsAgent;
+        
+        const errorCallLog: ICallLog = {
+          id: `error_${Date.now()}_${clientId}`,
+          clientId,
+          timestamp: admin.firestore.FieldValue.serverTimestamp() as any,
+          callType,
+          durationMinutes: 0,
+          agentId: localAgent?.id || agentId,
+          outcome: 'failed',
+          audioUrl: '',
+          transcription: '',
+          elevenLabsJobId: '',
+          transcriptionStatus: 'failed',
+          notes: `Error interno: ${error instanceof Error ? error.message : 'Error desconocido'}`
+        };
+
+        console.log('💥 [ERROR_CALL] Guardando llamada con error interno:', JSON.stringify(errorCallLog, null, 2));
+        await saveCallLog(clientRef, errorCallLog);
+      }
+    } catch (saveError) {
+      console.error('❌ [SAVE_ERROR] No se pudo guardar el error de llamada:', saveError);
+    }
+    
     return NextResponse.json(
       {
         success: false,

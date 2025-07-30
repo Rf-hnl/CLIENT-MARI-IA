@@ -12,7 +12,8 @@ import {
   UserCog,
   CreditCard,
   UserPlus,
-  Bot
+  Bot,
+  Phone
 } from 'lucide-react';
 
 /**
@@ -124,6 +125,13 @@ export const MODULES: AppModule[] = [
         label: 'Cobros',
         icon: <CreditCard className="h-4 w-4" />,
         path: '/clients/billing',
+        enabled: false,
+      },
+      {
+        id: 'clients-cobros-gestion',
+        label: 'Llamadas de Cobros',
+        icon: <Phone className="h-4 w-4" />,
+        path: '/clients/cobros',
         enabled: true,
       },
     ],
