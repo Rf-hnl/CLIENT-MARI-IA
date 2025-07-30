@@ -109,12 +109,14 @@ export async function POST(request: NextRequest) {
       call_name: `${callType} - ${clientData.name} - ${new Date().toISOString()}`,
       agent_id: elevenLabsAgentId,
       agent_phone_number_id: elevenLabsConfig.phoneId,
-      scheduled_time_unix: Math.floor(Date.now() / 1000),  // Lanza la llamada ya
+      scheduled_time_unix: 1,  // Lanza la llamada ya 
+      // scheduled_time_unix: Math.floor(Date.now() / 1000),  // Lanza la llamada ya
       recipients: [
         {
           phone_number: formatPanamaPhone(clientData.phone),
           conversation_initiation_client_data: {
             dynamic_variables: {
+              call_type: callType,  // Tipo de acción de llamada seleccionada
               phone: clientData.phone,
               name: clientData.name,
               company: clientData.employer || '',
