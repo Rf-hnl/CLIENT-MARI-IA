@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { IBatchCall } from '@/types/cobros';
+import { IBatchCall, getBatchHybridStatus } from '@/types/cobros';
 import { TrendingUp } from 'lucide-react';
 
 interface CallsChartProps {
@@ -26,29 +26,39 @@ interface CallsChartProps {
   loading?: boolean;
 }
 
-// Configuración de colores para el chart
+// Configuración de colores para el chart (actualizada para coincidir con estados híbridos)
 const chartConfig = {
-  completed: {
-    label: "Completadas",
-    color: "hsl(142, 76%, 36%)", // Verde
+  completed_success: {
+    label: "Exitosas",
+    color: "hsl(142, 76%, 36%)", // Verde - Solo para completadas exitosas
   },
-  failed: {
-    label: "Fallidas", 
-    // color: "hsl(0, 84%, 60%)", // Rojo
-    color: "hsl(25, 95%, 53%)", // Naranja
-
+  completed_partial: {
+    label: "Parciales",
+    color: "hsl(25, 95%, 53%)", // Naranja - Para completadas parciales
   },
-  cancelled: {
-    label: "Canceladas",
-    color: "hsl(0, 84%, 60%)", // Rojo
+  completed_failed: {
+    label: "Con Errores",
+    color: "hsl(0, 84%, 60%)", // Rojo - Para completadas con errores
+  },
+  processed: {
+    label: "Procesadas",
+    color: "hsl(221, 83%, 53%)", // Azul - Para procesadas sin detalle
   },
   in_progress: {
     label: "En Progreso",
-    color: "hsl(221, 83%, 53%)", // Azul
+    color: "hsl(200, 83%, 53%)", // Azul claro
   },
   pending: {
     label: "Pendientes",
-    color: "hsl(262, 83%, 58%)", // Púrpura
+    color: "hsl(48, 96%, 53%)", // Amarillo
+  },
+  failed: {
+    label: "Fallidas",
+    color: "hsl(0, 84%, 60%)", // Rojo
+  },
+  cancelled: {
+    label: "Canceladas",
+    color: "hsl(0, 0%, 45%)", // Gris
   },
 } satisfies ChartConfig;
 
@@ -59,26 +69,31 @@ export function CallsChart({ calls, loading }: CallsChartProps) {
   const chartData = useMemo(() => {
     if (!calls.length) return [];
 
-    // Agrupar llamadas por fecha
+    // Agrupar llamadas por fecha usando estados híbridos
     const grouped = calls.reduce((acc, call) => {
       const date = new Date(call.created_at).toISOString().split('T')[0]; // YYYY-MM-DD format
       
       if (!acc[date]) {
         acc[date] = {
           date,
-          completed: 0,
-          failed: 0,
-          cancelled: 0,
+          completed_success: 0,
+          completed_partial: 0,
+          completed_failed: 0,
+          processed: 0,
           in_progress: 0,
           pending: 0,
+          failed: 0,
+          cancelled: 0,
         };
       }
       
-      if (call.status === 'completed') acc[date].completed++;
-      else if (call.status === 'failed') acc[date].failed++;
-      else if (call.status === 'cancelled') acc[date].cancelled++;
-      else if (call.status === 'in_progress') acc[date].in_progress++;
-      else if (call.status === 'pending') acc[date].pending++;
+      // Usar estado híbrido para una clasificación más precisa
+      const hybridStatus = getBatchHybridStatus(call);
+      const status = hybridStatus.status;
+      
+      if (status in acc[date]) {
+        acc[date][status]++;
+      }
       
       return acc;
     }, {} as Record<string, any>);
@@ -155,7 +170,7 @@ export function CallsChart({ calls, loading }: CallsChartProps) {
             Análisis de Llamadas
           </CardTitle>
           <CardDescription>
-            Tendencia de llamadas completadas vs fallidas en el tiempo
+            Tendencia de llamadas exitosas, parciales y con errores en el tiempo
           </CardDescription>
         </div>
         <Select value={timeRange} onValueChange={setTimeRange}>
@@ -185,39 +200,51 @@ export function CallsChart({ calls, loading }: CallsChartProps) {
         >
           <AreaChart data={filteredData}>
             <defs>
-              <linearGradient id="fillCompleted" x1="0" y1="0" x2="0" y2="1">
+              <linearGradient id="fillCompletedSuccess" x1="0" y1="0" x2="0" y2="1">
                 <stop
                   offset="5%"
-                  stopColor="var(--color-completed)"
+                  stopColor="var(--color-completed_success)"
                   stopOpacity={0.8}
                 />
                 <stop
                   offset="95%"
-                  stopColor="var(--color-completed)"
+                  stopColor="var(--color-completed_success)"
                   stopOpacity={0.1}
                 />
               </linearGradient>
-              <linearGradient id="fillFailed" x1="0" y1="0" x2="0" y2="1">
+              <linearGradient id="fillCompletedPartial" x1="0" y1="0" x2="0" y2="1">
                 <stop
                   offset="5%"
-                  stopColor="var(--color-failed)"
+                  stopColor="var(--color-completed_partial)"
                   stopOpacity={0.8}
                 />
                 <stop
                   offset="95%"
-                  stopColor="var(--color-failed)"
+                  stopColor="var(--color-completed_partial)"
                   stopOpacity={0.1}
                 />
               </linearGradient>
-              <linearGradient id="fillCancelled" x1="0" y1="0" x2="0" y2="1">
+              <linearGradient id="fillCompletedFailed" x1="0" y1="0" x2="0" y2="1">
                 <stop
                   offset="5%"
-                  stopColor="var(--color-cancelled)"
+                  stopColor="var(--color-completed_failed)"
                   stopOpacity={0.8}
                 />
                 <stop
                   offset="95%"
-                  stopColor="var(--color-cancelled)"
+                  stopColor="var(--color-completed_failed)"
+                  stopOpacity={0.1}
+                />
+              </linearGradient>
+              <linearGradient id="fillProcessed" x1="0" y1="0" x2="0" y2="1">
+                <stop
+                  offset="5%"
+                  stopColor="var(--color-processed)"
+                  stopOpacity={0.8}
+                />
+                <stop
+                  offset="95%"
+                  stopColor="var(--color-processed)"
                   stopOpacity={0.1}
                 />
               </linearGradient>
@@ -242,6 +269,30 @@ export function CallsChart({ calls, loading }: CallsChartProps) {
                 <stop
                   offset="95%"
                   stopColor="var(--color-pending)"
+                  stopOpacity={0.1}
+                />
+              </linearGradient>
+              <linearGradient id="fillFailed" x1="0" y1="0" x2="0" y2="1">
+                <stop
+                  offset="5%"
+                  stopColor="var(--color-failed)"
+                  stopOpacity={0.8}
+                />
+                <stop
+                  offset="95%"
+                  stopColor="var(--color-failed)"
+                  stopOpacity={0.1}
+                />
+              </linearGradient>
+              <linearGradient id="fillCancelled" x1="0" y1="0" x2="0" y2="1">
+                <stop
+                  offset="5%"
+                  stopColor="var(--color-cancelled)"
+                  stopOpacity={0.8}
+                />
+                <stop
+                  offset="95%"
+                  stopColor="var(--color-cancelled)"
                   stopOpacity={0.1}
                 />
               </linearGradient>
@@ -305,13 +356,45 @@ export function CallsChart({ calls, loading }: CallsChartProps) {
               stackId="a"
             />
             <Area
-              dataKey="completed"
+              dataKey="processed"
               type="natural"
-              fill="url(#fillCompleted)"
-              stroke="var(--color-completed)"
+              fill="url(#fillProcessed)"
+              stroke="var(--color-processed)"
               stackId="a"
             />
-            <ChartLegend content={<ChartLegendContent nameKey="dataKey" />} />
+            <Area
+              dataKey="completed_failed"
+              type="natural"
+              fill="url(#fillCompletedFailed)"
+              stroke="var(--color-completed_failed)"
+              stackId="a"
+            />
+            <Area
+              dataKey="completed_partial"
+              type="natural"
+              fill="url(#fillCompletedPartial)"
+              stroke="var(--color-completed_partial)"
+              stackId="a"
+            />
+            <Area
+              dataKey="completed_success"
+              type="natural"
+              fill="url(#fillCompletedSuccess)"
+              stroke="var(--color-completed_success)"
+              stackId="a"
+            />
+            <ChartLegend
+              content={
+                <ChartLegendContent
+                  nameKey="dataKey"
+                  payload={Object.keys(chartConfig).map((key) => ({
+                    dataKey: key,
+                    color: chartConfig[key as keyof typeof chartConfig].color,
+                    value: chartConfig[key as keyof typeof chartConfig].label,
+                  }))}
+                />
+              }
+            />
           </AreaChart>
         </ChartContainer>
       </CardContent>

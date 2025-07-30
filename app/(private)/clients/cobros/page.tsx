@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, RefreshCw, Search, Filter, Eye, Phone, Calendar, Clock, Users } from 'lucide-react';
-import { BATCH_CALL_STATUS_COLORS, BATCH_CALL_STATUS_ICONS } from '@/types/cobros';
+import { BATCH_CALL_STATUS_COLORS, BATCH_CALL_STATUS_ICONS, BATCH_CALL_HYBRID_STATUS_COLORS, BATCH_CALL_HYBRID_STATUS_ICONS, getBatchHybridStatus } from '@/types/cobros';
 import { IBatchCall } from '@/types/cobros';
 import { safeFormatDate } from '@/utils/dateFormat';
 import { BatchCallDetailModal } from '@/components/cobros/BatchCallDetailModal';
@@ -315,8 +315,9 @@ interface BatchCallCardProps {
 }
 
 function BatchCallCard({ call, onViewDetails }: BatchCallCardProps) {
-  const statusColor = BATCH_CALL_STATUS_COLORS[call.status];
-  const statusIcon = BATCH_CALL_STATUS_ICONS[call.status];
+  const hybridStatus = getBatchHybridStatus(call);
+  const statusColor = BATCH_CALL_HYBRID_STATUS_COLORS[hybridStatus.status];
+  const statusIcon = BATCH_CALL_HYBRID_STATUS_ICONS[hybridStatus.status];
 
   return (
     <Card className="hover:shadow-md transition-shadow">
@@ -329,9 +330,12 @@ function BatchCallCard({ call, onViewDetails }: BatchCallCardProps) {
             <div className="flex items-center gap-2 flex-wrap">
               <Badge className={statusColor}>
                 <span className="mr-1">{statusIcon}</span>
-                {call.status_display}
+                {hybridStatus.display}
               </Badge>
               <Badge variant="outline">{call.call_type}</Badge>
+            </div>
+            <div className="text-xs text-muted-foreground mt-1">
+              {hybridStatus.description}
             </div>
           </div>
         </div>

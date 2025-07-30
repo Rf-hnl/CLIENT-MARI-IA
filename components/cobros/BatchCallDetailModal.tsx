@@ -4,11 +4,12 @@ import { useEffect } from 'react';
 import { useClients } from '@/modules/clients/hooks/useClients';
 import { useBatchCallDetail } from '@/hooks/useBatchCalls';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, X, Phone, Clock, User, CheckCircle, XCircle, AlertCircle, DollarSign, TrendingUp, Headphones, FileText, RotateCcw, Zap } from 'lucide-react';
-import { BATCH_CALL_STATUS_COLORS, BATCH_CALL_STATUS_ICONS } from '@/types/cobros';
+import { Loader2, X, Phone, Clock, User, CheckCircle, XCircle, AlertCircle, DollarSign, TrendingUp, Headphones, FileText, RotateCcw, Zap, ExternalLink } from 'lucide-react';
+import { BATCH_CALL_STATUS_COLORS, BATCH_CALL_STATUS_ICONS, BATCH_CALL_HYBRID_STATUS_COLORS, BATCH_CALL_HYBRID_STATUS_ICONS, getBatchHybridStatus } from '@/types/cobros';
 import { safeFormatDate } from '@/utils/dateFormat';
 
 interface BatchCallDetailModalProps {
@@ -69,11 +70,21 @@ export function BatchCallDetailModal({ batchId, isOpen, onClose }: BatchCallDeta
                     <h3 className="font-semibold text-foreground mb-2 leading-tight line-clamp-2">{detail.name}</h3>
                     <div className="space-y-2 text-sm">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <Badge className={BATCH_CALL_STATUS_COLORS[detail.status]}>
-                          <span className="mr-1">{BATCH_CALL_STATUS_ICONS[detail.status]}</span>
-                          {detail.status_display}
-                        </Badge>
-                        <Badge variant="outline">{detail.call_type}</Badge>
+                        {(() => {
+                          const hybridStatus = getBatchHybridStatus(detail, detail.recipients);
+                          return (
+                            <>
+                              <Badge className={BATCH_CALL_HYBRID_STATUS_COLORS[hybridStatus.status]}>
+                                <span className="mr-1">{BATCH_CALL_HYBRID_STATUS_ICONS[hybridStatus.status]}</span>
+                                {hybridStatus.display}
+                              </Badge>
+                              <Badge variant="outline">{detail.call_type}</Badge>
+                              <div className="text-xs text-muted-foreground w-full mt-1">
+                                {hybridStatus.description}
+                              </div>
+                            </>
+                          );
+                        })()}
                       </div>
                       <div>
                         <span className="font-medium">ID:</span> 
@@ -402,9 +413,18 @@ export function BatchCallDetailModal({ batchId, isOpen, onClose }: BatchCallDeta
                             {/* Información técnica */}
                             <div className="space-y-1">
                               {recipient.conversation_id && (
-                                <div>
-                                  <span className="font-medium text-muted-foreground">Conversación:</span>
-                                  <p className="font-mono text-xs truncate text-foreground">{recipient.conversation_id}</p>
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <span className="font-medium text-muted-foreground">Conversación:</span>
+                                    <p className="font-mono text-xs truncate text-foreground">{recipient.conversation_id}</p>
+                                  </div>
+                                  {detail.id && recipient.conversation_id && (
+                                    <Link href={`/clients/cobros/call/${detail.id}/${recipient.conversation_id}`} passHref>
+                                      <Button variant="outline" size="sm" className="ml-2">
+                                        <ExternalLink className="h-3 w-3 mr-1" /> Ver
+                                      </Button>
+                                    </Link>
+                                  )}
                                 </div>
                               )}
                               {recipient.call_id && (

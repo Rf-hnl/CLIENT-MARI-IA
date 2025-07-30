@@ -112,6 +112,57 @@ export interface IElevenLabsConnectionTest {
   error?: string;
 }
 
+// ==========================================
+// CONVERSATION DETAILS FROM ELEVENLABS API
+// ==========================================
+export interface IConversationDetail {
+  agent_id: string;
+  conversation_id: string;
+  status: 'initiated' | 'in-progress' | 'processing' | 'done' | 'failed';
+  transcript: Array<{
+    role: 'user' | 'agent'; // Assuming roles are user or agent
+    time_in_call_secs: number;
+    message: string;
+  }>;
+  metadata: {
+    start_time_unix_secs: number;
+    call_duration_secs: number;
+    // Add other metadata fields as needed from the ElevenLabs API response
+    [key: string]: any; // Allow for other unknown metadata properties
+  };
+  has_audio: boolean;
+  has_user_audio: boolean;
+  has_response_audio: boolean;
+  user_id?: string | null;
+  analysis?: { // Assuming a basic structure for analysis
+    [key: string]: any; // Allow for other unknown analysis properties
+  } | null;
+  conversation_initiation_client_data?: { // Reusing the type from IBatchCallRecipient
+    conversation_config_override?: {
+      tts?: {
+        voice_id?: string;
+      };
+      conversation?: {
+        text_only?: boolean;
+      };
+      agent?: {
+        first_message?: string;
+        language?: string;
+        prompt?: {
+          prompt?: string;
+        };
+      };
+    };
+    custom_llm_extra_body?: Record<string, any>;
+    user_id?: string;
+    source_info?: {
+      source?: string;
+      version?: string;
+    };
+    dynamic_variables?: Record<string, any>;
+  } | null;
+}
+
 // Respuesta de API para listar voces disponibles
 export interface IElevenLabsVoice {
   voice_id: string;
