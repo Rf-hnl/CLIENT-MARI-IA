@@ -50,8 +50,15 @@ export async function POST(request: NextRequest) {
     const clientData = clientDoc.data() as IClientDocument;
     const callLogs = clientData.customerInteractions?.callLogs || [];
 
-    console.log(`📞 Call History requested for client: ${clientId}`);
-    console.log(`📊 Found ${callLogs.length} call records (IDs only)`);
+    console.log(`📞 [CALL_HISTORY] Call History requested for client: ${clientId}`);
+    console.log(`📄 [CLIENT_DOC] Estructura del documento:`);
+    console.log(`- Tiene _data:`, !!clientData._data);
+    console.log(`- Tiene customerInteractions:`, !!clientData.customerInteractions);
+    console.log(`📊 [CALL_LOGS] Found ${callLogs.length} call records`);
+    
+    if (callLogs.length > 0) {
+      console.log(`🔍 [FIRST_CALL] Primer callLog:`, JSON.stringify(callLogs[0], null, 2));
+    }
 
     // TODO: Aquí se llamarían los servicios MCP externos para obtener:
     // - Transcripciones de ElevenLabs
