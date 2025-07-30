@@ -14,7 +14,7 @@ interface IPhoneCallConversation {
   id: string;
   clientId: string;
   callLog: ICallLog;
-  conversationSegments?: any[];
+  conversationSegments?: Record<string, unknown>[];
   // Add other fields that might come from the backend for display
   callDirection?: 'inbound' | 'outbound';
   startTime?: IFirebaseTimestamp | Date;
@@ -38,7 +38,7 @@ interface PhoneCallListProps {
   conversations: IPhoneCallConversation[]; // Add conversations prop
 }
 
-export const PhoneCallList = ({ clientId, onSelectConversation, selectedConversationId, conversations }: PhoneCallListProps) => {
+export const PhoneCallList = ({ onSelectConversation, selectedConversationId, conversations }: PhoneCallListProps) => {
   // conversations are now passed from parent, no need to filter here
 
   return (
@@ -153,7 +153,7 @@ export const PhoneCallTranscription = ({ conversation, onBackToList }: PhoneCall
 
 // This component will no longer be directly used as PhoneCallHistory, but its logic is split.
 // The action selection part will be integrated into the main ContactActionsPage.
-export const PhoneCallHistory = ({ clientId }: { clientId: string }) => {
+export const PhoneCallHistory = () => {
   // This component is now a placeholder or can be removed if not needed elsewhere.
   // The logic has been moved to PhoneCallList and PhoneCallTranscription.
   return (

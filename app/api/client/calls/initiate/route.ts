@@ -38,7 +38,7 @@ async function saveCallLog(clientRef: admin.firestore.DocumentReference, callLog
   console.log('🔄 [UPDATE] Actualizando con', updatedCallLogs.length, 'callLogs total');
 
   // Si no existe customerInteractions, necesitamos inicializarlo
-  const updateData: any = {
+  const updateData: Record<string, any> = {
     updatedAt: admin.firestore.FieldValue.serverTimestamp()
   };
 

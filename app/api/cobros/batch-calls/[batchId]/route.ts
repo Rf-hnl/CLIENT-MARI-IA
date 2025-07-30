@@ -57,10 +57,10 @@ interface BatchCallDetail {
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { batchId: string } }
+  { params }: { params: Promise<{ batchId: string }> }
 ) {
   try {
-    const { batchId } = params;
+    const { batchId } = await params;
     console.log(`🔍 [BATCH_DETAIL] Obteniendo detalles para batch: ${batchId}`);
     
     const body = await request.json();

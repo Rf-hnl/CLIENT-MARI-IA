@@ -172,25 +172,7 @@ export function AgentInfoForm({
 
       // Luego crear/guardar la referencia local con la configuración actualizada
       const agentData: ICreateAgentData = {
-        name: data.name,
-        description: `Agente conectado desde ElevenLabs: ${data.name}`,
-        elevenLabsConfig: {
-          agentId: agentInfo.agent_id,
-          voice: {
-            voiceId: data.voiceId,
-            voiceName: voices.find(v => v.voice_id === data.voiceId)?.name || 'Voz desconocida',
-            stability: data.stability,
-            similarityBoost: data.similarityBoost,
-            style: 0.0 // Default value
-          },
-          conversation: {
-            model: data.model,
-            temperature: data.temperature,
-            maxTokens: data.maxTokens,
-            systemPrompt: data.systemPrompt,
-            firstMessage: data.firstMessage
-          }
-        },
+        elevenLabsAgentId: agentInfo.agent_id,
         usage: {
           targetScenarios: selectedScenarios,
           daysOverdueRange: {

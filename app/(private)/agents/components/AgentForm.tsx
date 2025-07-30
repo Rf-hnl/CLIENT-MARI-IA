@@ -91,21 +91,21 @@ export function AgentForm({
     defaultValues: {
       name: agent?.name || '',
       description: agent?.description || '',
-      agentId: agent?.elevenLabsConfig.agentId || existingAgentId || '',
-      voiceId: agent?.elevenLabsConfig.voice.voiceId || '',
-      voiceName: agent?.elevenLabsConfig.voice.voiceName || '',
-      stability: agent?.elevenLabsConfig.voice.stability || 0.75,
-      similarityBoost: agent?.elevenLabsConfig.voice.similarityBoost || 0.75,
-      style: agent?.elevenLabsConfig.voice.style || 0.0,
-      model: agent?.elevenLabsConfig.conversation.model || 'eleven_turbo_v2',
-      temperature: agent?.elevenLabsConfig.conversation.temperature || 0.7,
-      maxTokens: agent?.elevenLabsConfig.conversation.maxTokens || 2000,
-      systemPrompt: agent?.elevenLabsConfig.conversation.systemPrompt || '',
-      firstMessage: agent?.elevenLabsConfig.conversation.firstMessage || '',
-      daysOverdueMin: agent?.usage.daysOverdueRange.min || 0,
-      daysOverdueMax: agent?.usage.daysOverdueRange.max || 30,
-      priority: agent?.usage.priority || 5,
-      tags: agent?.metadata.tags.join(', ') || ''
+      agentId: agent?.elevenLabsConfig?.agentId || existingAgentId || '',
+      voiceId: agent?.elevenLabsData?.conversation_config?.tts?.voice_id || '',
+      voiceName: '',
+      stability: agent?.elevenLabsData?.conversation_config?.tts?.stability || 0.75,
+      similarityBoost: agent?.elevenLabsData?.conversation_config?.tts?.similarity_boost || 0.75,
+      style: 0.0,
+      model: agent?.elevenLabsData?.conversation_config?.tts?.model_id || 'eleven_turbo_v2',
+      temperature: agent?.elevenLabsData?.conversation_config?.agent?.prompt?.temperature || 0.7,
+      maxTokens: agent?.elevenLabsData?.conversation_config?.agent?.prompt?.max_tokens || 2000,
+      systemPrompt: agent?.elevenLabsData?.conversation_config?.agent?.prompt?.prompt || '',
+      firstMessage: agent?.elevenLabsData?.conversation_config?.agent?.first_message || '',
+      daysOverdueMin: agent?.usage?.daysOverdueRange?.min || 0,
+      daysOverdueMax: agent?.usage?.daysOverdueRange?.max || 30,
+      priority: agent?.usage?.priority || 5,
+      tags: agent?.metadata?.tags?.join(', ') || ''
     }
   });
 
@@ -132,25 +132,7 @@ export function AgentForm({
   const onSubmit = async (data: AgentFormData) => {
     try {
       const agentData: ICreateAgentData | IUpdateAgentData = {
-        name: data.name,
-        description: data.description,
-        elevenLabsConfig: {
-          agentId: data.agentId,
-          voice: {
-            voiceId: data.voiceId,
-            voiceName: data.voiceName,
-            stability: data.stability,
-            similarityBoost: data.similarityBoost,
-            style: data.style
-          },
-          conversation: {
-            model: data.model,
-            temperature: data.temperature,
-            maxTokens: data.maxTokens,
-            systemPrompt: data.systemPrompt,
-            firstMessage: data.firstMessage
-          }
-        },
+        elevenLabsAgentId: data.agentId,
         usage: {
           targetScenarios: selectedScenarios,
           daysOverdueRange: {
