@@ -16,8 +16,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Loader2 } from 'lucide-react';
-import { ITenantElevenLabsAgent, ICreateAgentData, IAgentUsageRules, IAgentMetadata } from '@/types/agents';
-import { IElevenLabsAgentInfo, IElevenLabsAgentConfig, IElevenLabsVoiceConfig, IElevenLabsConversationConfig } from '@/types/elevenlabs'; // Import ElevenLabs specific types directly
+import { ITenantElevenLabsAgent, ICreateAgentData } from '@/types/agents';
+import { IAgentUsageRules, IAgentMetadata } from '@/types/elevenlabs';
+import { IElevenLabsAgentInfo, IElevenLabsAgentConfig } from '@/types/elevenlabs'; // Import ElevenLabs specific types directly
 import { useAgentsContext } from '@/modules/agents/context/AgentsContext';
 import { toast } from 'sonner';
 import { Timestamp } from 'firebase/firestore'; // Import Timestamp for metadata defaults
@@ -79,10 +80,10 @@ export const AgentFormModal = ({ isOpen, onClose, agentToEdit }: AgentFormModalP
         name: agentToEdit.name || '',
         description: agentToEdit.description || '',
         elevenLabsAgentId: agentToEdit.elevenLabsData?.agent_id || agentToEdit.elevenLabsConfig?.agentId || '',
-        voiceId: agentToEdit.elevenLabsData?.conversation_config?.tts?.voice_id || agentToEdit.elevenLabsConfig?.voice?.voiceId || '',
-        llmModelId: agentToEdit.elevenLabsData?.conversation_config?.agent?.prompt?.llm || agentToEdit.elevenLabsConfig?.conversation?.model || '',
-        systemPrompt: agentToEdit.elevenLabsData?.conversation_config?.agent?.prompt?.prompt || agentToEdit.elevenLabsConfig?.conversation?.systemPrompt || '',
-        firstMessage: agentToEdit.elevenLabsData?.conversation_config?.agent?.first_message || agentToEdit.elevenLabsConfig?.conversation?.firstMessage || '',
+        voiceId: agentToEdit.elevenLabsData?.conversation_config?.tts?.voice_id || '',
+        llmModelId: agentToEdit.elevenLabsData?.conversation_config?.agent?.prompt?.llm || '',
+        systemPrompt: agentToEdit.elevenLabsData?.conversation_config?.agent?.prompt?.prompt || '',
+        firstMessage: agentToEdit.elevenLabsData?.conversation_config?.agent?.first_message || '',
         targetScenarios: agentToEdit.usage?.targetScenarios || [],
         daysOverdueMin: agentToEdit.usage?.daysOverdueRange?.min || 0,
         daysOverdueMax: agentToEdit.usage?.daysOverdueRange?.max || 0,
@@ -220,7 +221,7 @@ export const AgentFormModal = ({ isOpen, onClose, agentToEdit }: AgentFormModalP
       let result;
       if (agentToEdit && agentToEdit.id) {
         // Update existing agent
-        result = await updateAgent(agentToEdit.id, {
+        const updatedAgent: ITenantElevenLabsAgent = {
           ...agentToEdit, // Spread existing agent data to preserve non-form fields
           name: formData.name,
           description: formData.description,
@@ -228,7 +229,8 @@ export const AgentFormModal = ({ isOpen, onClose, agentToEdit }: AgentFormModalP
           elevenLabsConfig: elevenLabsConfig,
           usage: usage,
           metadata: metadata
-        });
+        };
+        result = await updateAgent(agentToEdit.id, updatedAgent);
       } else {
         // Create new agent
         const newAgentData: ICreateAgentData = {

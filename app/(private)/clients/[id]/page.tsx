@@ -1,5 +1,8 @@
 'use client';
 
+// ✅ OPTIMIZACIÓN: Esta página NO carga agentes para evitar consultas innecesarias
+// Los agentes solo se cargan en páginas que los necesitan (/agents, /calls, etc.)
+
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useClients } from '@/modules/clients/hooks/useClients';

@@ -28,6 +28,7 @@ interface AgentsContextType {
   stats: ITenantAgentsStats | null;
   loading: boolean;
   error: string | null;
+  isLoaded: boolean; // Nuevo: indica si los agentes ya fueron cargados
   
   // Configuración ElevenLabs
   config: ITenantElevenLabsConfig | null;
@@ -90,6 +91,7 @@ export function AgentsProvider({ children }: AgentsProviderProps) {
     stats: agentsHook.stats, // Mantener stats del hook original
     loading: enrichedAgentsHook.loading || configHook.loading,
     error: enrichedAgentsHook.error || configHook.error,
+    isLoaded: enrichedAgentsHook.agents.length > 0, // Nuevo: indica si hay agentes cargados
     
     // Configuración ElevenLabs
     config: configHook.config,

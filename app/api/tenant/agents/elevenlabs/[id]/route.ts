@@ -9,12 +9,12 @@ import {
 // GET - Obtener agente específico
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { searchParams } = new URL(request.url);
     const tenantId = searchParams.get('tenantId');
-    const agentId = params.id;
+    const { id: agentId } = await params;
 
     if (!tenantId || !agentId) {
       return NextResponse.json(
@@ -59,7 +59,7 @@ export async function GET(
 // PUT - Actualizar agente
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const body = await request.json();
@@ -68,7 +68,7 @@ export async function PUT(
       uid: string; 
     } & IUpdateAgentData = body;
     
-    const agentId = params.id;
+    const { id: agentId } = await params;
 
     if (!tenantId || !uid || !agentId) {
       return NextResponse.json(
@@ -154,13 +154,13 @@ export async function PUT(
 // DELETE - Eliminar agente
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { searchParams } = new URL(request.url);
     const tenantId = searchParams.get('tenantId');
     const uid = searchParams.get('uid');
-    const agentId = params.id;
+    const { id: agentId } = await params;
 
     if (!tenantId || !uid || !agentId) {
       return NextResponse.json(

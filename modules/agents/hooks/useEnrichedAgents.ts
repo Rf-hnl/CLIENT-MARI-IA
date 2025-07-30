@@ -152,13 +152,14 @@ export const useEnrichedAgents = ({ tenantId, uid }: UseEnrichedAgentsProps) => 
     }
   };
 
-  // Cargar agentes al montar o cambiar tenantId
-  useEffect(() => {
-    if (tenantId) {
-      console.log('🔄 [ENRICHED_AGENTS] Auto-loading on mount or tenantId change');
-      fetchEnrichedAgents();
-    }
-  }, [tenantId, fetchEnrichedAgents]);
+  // DESHABILITADO: No cargar agentes automáticamente para evitar consultas innecesarias
+  // Solo cargar cuando se llame explícitamente a fetchEnrichedAgents()
+  // useEffect(() => {
+  //   if (tenantId) {
+  //     console.log('🔄 [ENRICHED_AGENTS] Auto-loading on mount or tenantId change');
+  //     fetchEnrichedAgents();
+  //   }
+  // }, [tenantId, fetchEnrichedAgents]);
 
   return {
     agents,

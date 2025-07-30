@@ -16,6 +16,7 @@ import {
   Loader2 
 } from 'lucide-react';
 import { AgentsProvider, useAgentsContext } from '@/modules/agents/context/AgentsContext';
+import { AgentsLoader } from '@/modules/agents/components/AgentsLoader';
 import { ElevenLabsConfigSection } from './components/ElevenLabsConfigSection';
 import { AgentsList } from './components/AgentsList';
 import { AgentCreationModal } from './components/AgentCreationModal';
@@ -160,7 +161,7 @@ function AgentsPageContent() {
                 </CardContent>
               </Card>
             ) : (
-              <>
+              <AgentsLoader autoLoad={activeTab === 'agents'} showLoading={true}>
                 <div className="flex items-center justify-between">
                   <div>
                     <h2 className="text-2xl font-semibold">Agentes de ElevenLabs</h2>
@@ -175,7 +176,7 @@ function AgentsPageContent() {
                 </div>
 
                 <AgentsList onEditAgent={handleEditAgent} />
-              </>
+              </AgentsLoader>
             )}
           </TabsContent>
 
@@ -192,7 +193,9 @@ function AgentsPageContent() {
                 </CardContent>
               </Card>
             ) : (
-              <AgentsStats stats={stats} />
+              <AgentsLoader autoLoad={activeTab === 'stats'} showLoading={true}>
+                <AgentsStats stats={stats} />
+              </AgentsLoader>
             )}
           </TabsContent>
 

@@ -5,10 +5,14 @@ interface IEmailRecord {
   id: string;
   clientId: string;
   subject: string;
-  content: string;
+  content: string; // Changed from 'body' to 'content' to match usage
   timestamp: any;
   direction: 'inbound' | 'outbound';
   status?: string;
+  agentResponse?: { // Added agentResponse property
+    role: 'bot' | 'agent'; // Assuming roles can be bot or agent
+    content: string;
+  }[];
 }
 import { safeFormatDate } from '@/utils/dateFormat';
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -53,7 +57,7 @@ export const EmailHistory = ({ clientId, filterDays }: EmailHistoryProps) => {
 
   return (
     <TooltipProvider>
-      <div className="flex flex-col h-[calc(100vh-200px)] bg-gray-50 rounded-lg overflow-hidden">
+      <div className="flex flex-col h-[calc(100vh-200px)] bg-background rounded-lg overflow-hidden">
         {/* Filter buttons are now handled by the parent component */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {filteredRecords.length === 0 && <p className="text-center text-muted-foreground mt-8">No hay registros de Email para este cliente.</p>}
@@ -75,7 +79,7 @@ export const EmailHistory = ({ clientId, filterDays }: EmailHistoryProps) => {
                   <div
                     className={`flex flex-col max-w-[70%] p-3 rounded-lg ${
                       isClient
-                        ? 'bg-white text-gray-800 rounded-tl-none shadow-sm'
+                        ? 'bg-card text-foreground rounded-tl-none shadow-sm'
                         : 'bg-blue-600 text-white rounded-tr-none shadow-sm'
                     }`}
                   >
@@ -86,14 +90,14 @@ export const EmailHistory = ({ clientId, filterDays }: EmailHistoryProps) => {
                       </p>
                     </div>
                     <p className="text-sm font-bold mb-1">Asunto: {record.subject}</p>
-                    <p className="text-sm whitespace-pre-wrap">{record.body}</p>
+                    <p className="text-sm whitespace-pre-wrap">{record.content}</p>
                     {record.agentResponse && (
                       <div className={`mt-3 p-2 rounded-md ${isClient ? 'bg-gray-100' : 'bg-blue-700'}`}>
                         <p className={`text-xs font-semibold mb-1 ${isClient ? 'text-gray-700' : 'text-blue-100'}`}>
                           Respuesta del Agente/Bot
                         </p>
                         <div className="space-y-1">
-                          {record.agentResponse.map((entry, index) => (
+                          {record.agentResponse.map((entry: { role: string; content: string }, index: number) => (
                             <div key={index} className={`text-xs ${isClient ? (entry.role === 'bot' ? 'text-blue-600' : 'text-gray-800') : (entry.role === 'bot' ? 'text-blue-200' : 'text-white')}`}>
                               <span className="font-bold">{entry.role}: </span>
                               <span>{entry.content}</span>
@@ -166,7 +170,7 @@ export const EmailHistory = ({ clientId, filterDays }: EmailHistoryProps) => {
             );
           })}
         </div>
-        <div className="p-4 border-t bg-white flex items-center gap-2">
+        <div className="p-4 border-t bg-background flex items-center gap-2">
           <Select onValueChange={setSelectedAction} value={selectedAction}>
             <SelectTrigger className="flex-1">
               <SelectValue placeholder="Selecciona una acción o misión..." />

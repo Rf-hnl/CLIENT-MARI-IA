@@ -143,7 +143,7 @@ export const WhatsAppHistory = ({ clientId, filterDays }: WhatsAppHistoryProps) 
 
   return (
     <TooltipProvider>
-      <div className="flex flex-col h-[calc(100vh-200px)] bg-gray-50 rounded-lg overflow-hidden">
+      <div className="flex flex-col h-[calc(100vh-200px)] bg-background rounded-lg overflow-hidden">
         {/* Filter buttons are now handled by the parent component */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {filteredRecords.length === 0 && <p className="text-center text-muted-foreground mt-8">No hay registros de WhatsApp para este cliente.</p>}
@@ -165,7 +165,7 @@ export const WhatsAppHistory = ({ clientId, filterDays }: WhatsAppHistoryProps) 
                   <div
                     className={`flex flex-col max-w-[70%] p-3 rounded-lg ${
                       isClient
-                        ? 'bg-white text-gray-800 rounded-tl-none shadow-sm'
+                        ? 'bg-card text-foreground rounded-tl-none shadow-sm'
                         : 'bg-blue-600 text-white rounded-tr-none shadow-sm'
                     }`}
                   >
@@ -255,7 +255,7 @@ export const WhatsAppHistory = ({ clientId, filterDays }: WhatsAppHistoryProps) 
             );
           })}
         </div>
-        <div className="p-4 border-t bg-white flex items-center gap-2">
+        <div className="p-4 border-t bg-background flex items-center gap-2">
           <Select onValueChange={setSelectedAction} value={selectedAction}>
             <SelectTrigger className="flex-1">
               <SelectValue placeholder="Selecciona una acción o misión..." />
@@ -276,7 +276,7 @@ export const WhatsAppHistory = ({ clientId, filterDays }: WhatsAppHistoryProps) 
         isOpen={showConfirmModal}
         onClose={handleCancelExecution}
         onConfirm={handleConfirmExecution}
-        client={currentClient}
+        client={currentClient || null}
         selectedAction={selectedAction}
         isLoading={isExecuting}
       />

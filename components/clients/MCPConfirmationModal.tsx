@@ -58,7 +58,7 @@ export default function MCPConfirmationModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[80vh]">
+      <DialogContent className="max-w-4xl max-h-[80vh] bg-background">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             🚀 Confirmar Acción MCP WhatsApp
@@ -83,38 +83,40 @@ export default function MCPConfirmationModal({
             </div>
           </div>
 
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <h4 className="text-sm font-semibold">Comando cURL que se ejecutará:</h4>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleCopy}
-                className="flex items-center gap-2"
-              >
-                {copied ? (
-                  <>
-                    <Check className="h-4 w-4" />
-                    Copiado
-                  </>
-                ) : (
-                  <>
-                    <Copy className="h-4 w-4" />
-                    Copiar
-                  </>
-                )}
-              </Button>
+          {process.env.NEXT_PUBLIC_DEVELOPMENT === 'true' && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-semibold">Comando cURL que se ejecutará:</h4>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCopy}
+                  className="flex items-center gap-2"
+                >
+                  {copied ? (
+                    <>
+                      <Check className="h-4 w-4" />
+                      Copiado
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-4 w-4" />
+                      Copiar
+                    </>
+                  )}
+                </Button>
+              </div>
+              
+              <ScrollArea className="h-[300px] w-full border rounded-md">
+                <pre className="p-4 text-xs font-mono whitespace-pre-wrap bg-card text-foreground">
+                  {curlCommand}
+                </pre>
+              </ScrollArea>
             </div>
-            
-            <ScrollArea className="h-[300px] w-full border rounded-md">
-              <pre className="p-4 text-xs font-mono whitespace-pre-wrap bg-gray-50">
-                {curlCommand}
-              </pre>
-            </ScrollArea>
-          </div>
+          )}
 
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-            <p className="text-sm text-yellow-800">
+          <div className="bg-yellow-900/20 dark:bg-yellow-900/40 border border-yellow-700/50 rounded-lg p-3">
+            <p className="text-sm text-yellow-200 dark:text-yellow-100">
               ⚠️ <strong>Esta acción enviará datos reales</strong> al servicio MCP y iniciará una conversación de WhatsApp con el cliente.
             </p>
           </div>

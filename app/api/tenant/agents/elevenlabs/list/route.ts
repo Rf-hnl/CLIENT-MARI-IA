@@ -20,6 +20,7 @@ export async function GET(request: NextRequest) {
     const tags = searchParams.get('tags')?.split(',');
     const scenarios = searchParams.get('scenarios')?.split(',');
     const riskCategories = searchParams.get('riskCategories')?.split(',');
+    const lightweight = searchParams.get('lightweight') === 'true'; // Nuevo: modo ligero
 
     if (!tenantId) {
       return NextResponse.json(
@@ -28,7 +29,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    console.log(`[LIST AGENTS] Fetching agents for tenant: ${tenantId}`);
+    console.log(`[LIST AGENTS] Fetching agents for tenant: ${tenantId} (lightweight: ${lightweight})`);
 
     const agentsPath = `tenants/${tenantId}/elevenlabs-agents`;
     const agentsCollectionRef = adminDb.collection(agentsPath);
@@ -55,11 +56,18 @@ export async function GET(request: NextRequest) {
     });
 
     // Aplicar filtros que no se pueden hacer en Firestore
-    if (search) {
+    if (search && !lightweight) {
       const searchLower = search.toLowerCase();
       agents = agents.filter(agent => 
         agent.name.toLowerCase().includes(searchLower) ||
-        agent.description.toLowerCase().includes(searchLower)
+        (agent.description && agent.description.toLowerCase().includes(searchLower))
+      );
+    } else if (search && lightweight) {
+      // Para modo ligero, buscar solo en cache si existe
+      const searchLower = search.toLowerCase();
+      agents = agents.filter(agent => 
+        (agent.cache?.name && agent.cache.name.toLowerCase().includes(searchLower)) ||
+        agent.elevenLabsConfig.agentId.toLowerCase().includes(searchLower)
       );
     }
 

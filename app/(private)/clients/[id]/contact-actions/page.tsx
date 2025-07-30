@@ -68,7 +68,7 @@ export default function ContactActionsPage() {
   };
 
   return (
-    <div className="p-4 bg-white min-h-screen flex flex-col">
+    <div className="p-4 min-h-screen flex flex-col">
       <div className="mb-4 flex items-center gap-2">
         <Button variant="ghost" size="icon" onClick={() => router.back()}>
           <ArrowLeft className="h-5 w-5" />

@@ -1,5 +1,8 @@
 'use client';
 
+// ✅ THEME SUPPORT: Este componente ha sido actualizado para soportar dark/light theme
+// usando clases de Tailwind CSS responsivas al tema (bg-background, text-foreground, etc.)
+
 import { Button } from '@/components/ui/button';
 // Removed unused Select components imports
 import { safeFormatDate } from '@/utils/dateFormat';
@@ -39,7 +42,7 @@ export const PhoneCallList = ({ clientId, onSelectConversation, selectedConversa
   // conversations are now passed from parent, no need to filter here
 
   return (
-    <div className="flex flex-col h-full bg-gray-50 rounded-lg overflow-hidden">
+    <div className="flex flex-col h-full bg-muted/50 dark:bg-muted/20 rounded-lg overflow-hidden border border-border">
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {conversations.length > 0 ? (
           <div className="space-y-3">
@@ -47,8 +50,10 @@ export const PhoneCallList = ({ clientId, onSelectConversation, selectedConversa
             {conversations.map(conversation => (
               <div
                 key={conversation.id}
-                className={`bg-white p-4 rounded-lg shadow-sm border cursor-pointer ${
-                  selectedConversationId === conversation.id ? 'border-blue-500 ring-2 ring-blue-200' : 'border-gray-200'
+                className={`bg-background dark:bg-card p-4 rounded-lg shadow-sm border cursor-pointer transition-colors hover:bg-muted/50 dark:hover:bg-muted/10 ${
+                  selectedConversationId === conversation.id 
+                    ? 'border-primary ring-2 ring-primary/20 dark:ring-primary/30' 
+                    : 'border-border hover:border-primary/50'
                 } flex justify-between items-center`}
                 onClick={() => onSelectConversation(conversation.id)}
               >
@@ -82,13 +87,13 @@ interface PhoneCallTranscriptionProps {
 
 export const PhoneCallTranscription = ({ conversation, onBackToList }: PhoneCallTranscriptionProps) => {
   return (
-    <div className="flex flex-col h-full min-h-0 bg-gray-50 rounded-lg overflow-hidden">
-      <div className="mb-4 flex items-center justify-between p-4 border-b bg-white">
+    <div className="flex flex-col h-full min-h-0 bg-muted/50 dark:bg-muted/20 rounded-lg overflow-hidden border border-border">
+      <div className="mb-4 flex items-center justify-between p-4 border-b border-border bg-background dark:bg-card">
         <Button variant="ghost" onClick={onBackToList}>
           <ArrowLeft className="h-4 w-4 mr-2" />
           Volver a la lista de llamadas
         </Button>
-        <div className="text-sm font-semibold text-gray-700">
+        <div className="text-sm font-semibold text-foreground">
           Conversación ({conversation.callDirection === 'outbound' ? 'Saliente' : 'Entrante'}) - {safeFormatDate(conversation.startTime)}
           {conversation.duration && <span className="ml-2 text-xs text-muted-foreground">({conversation.duration}s)</span>}
         </div>
@@ -100,7 +105,7 @@ export const PhoneCallTranscription = ({ conversation, onBackToList }: PhoneCall
             const isBot = turn.role === 'bot';
             const senderName = isAgent ? 'Agente' : (isBot ? 'LLM' : 'Cliente');
             const avatarFallback = isAgent ? 'AG' : (isBot ? 'AI' : 'CL');
-            const avatarBg = isAgent ? 'bg-blue-300 text-blue-700' : (isBot ? 'bg-purple-300 text-purple-700' : 'bg-gray-300 text-gray-700');
+            const avatarBg = isAgent ? 'bg-primary/20 text-primary dark:bg-primary/30' : (isBot ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300' : 'bg-muted text-muted-foreground');
 
           return (
             <div
@@ -115,13 +120,13 @@ export const PhoneCallTranscription = ({ conversation, onBackToList }: PhoneCall
               <div
                 className={`flex flex-col max-w-[70%] p-3 rounded-lg ${
                   isAgent
-                    ? 'bg-blue-600 text-white rounded-tr-none shadow-sm'
-                    : 'bg-white text-gray-800 rounded-tl-none shadow-sm'
+                    ? 'bg-primary text-primary-foreground rounded-tr-none shadow-sm'
+                    : 'bg-background dark:bg-card text-foreground rounded-tl-none shadow-sm border border-border'
                 }`}
               >
                 <div className="flex justify-between items-center mb-1">
                   <p className="text-xs font-semibold">{senderName}</p>
-                  <p className={`text-xs ${isAgent ? 'text-blue-200' : 'text-muted-foreground'}`}>
+                  <p className={`text-xs ${isAgent ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
                     {safeFormatDate(turn.timestamp)}
                     {turn.llmResponseTime && <span className="ml-1">({turn.llmResponseTime}ms)</span>}
                   </p>

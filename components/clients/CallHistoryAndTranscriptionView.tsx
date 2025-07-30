@@ -1,5 +1,8 @@
 'use client';
 
+// ✅ THEME SUPPORT: Este componente ha sido actualizado para soportar dark/light theme
+// usando clases de Tailwind CSS responsivas al tema (bg-background, text-foreground, etc.)
+
 import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -7,6 +10,7 @@ import { PhoneCall, Loader2 } from 'lucide-react'; // Added Loader2 for loading 
 import { PhoneCallList, PhoneCallTranscription } from '@/components/clients/PhoneCallHistory';
 import { ICallLog, IFirebaseTimestamp } from '@/modules/clients/types/clients';
 import { useAgentsContext } from '@/modules/agents/context/AgentsContext'; // Import useAgentsContext
+import { AgentsLoader } from '@/modules/agents/components/AgentsLoader'; // Import AgentsLoader for on-demand loading
 import { useClients } from '@/modules/clients/hooks/useClients'; // Import useClients for tenant/org IDs
 import { ITenantElevenLabsAgent } from '@/types/agents'; // Import agent type
 import { toast } from 'sonner'; // Assuming sonner is used for toasts
@@ -30,7 +34,8 @@ interface CallHistoryAndTranscriptionViewProps {
   filterDays: number | null; // Add filterDays prop
 }
 
-export const CallHistoryAndTranscriptionView = ({ clientId, filterDays }: CallHistoryAndTranscriptionViewProps) => {
+// Componente interno que usa los agentes
+const CallHistoryContent = ({ clientId, filterDays }: CallHistoryAndTranscriptionViewProps) => {
   const { currentTenant, currentOrganization } = useClients(); // Use useClients for tenant/org IDs
   const { agents, loading: agentsLoading, error: agentsError } = useAgentsContext();
   
@@ -198,14 +203,14 @@ export const CallHistoryAndTranscriptionView = ({ clientId, filterDays }: CallHi
               onBackToList={() => setSelectedConversationId(null)}
             />
           ) : (
-            <div className="flex-1 flex items-center justify-center bg-gray-50 rounded-lg text-muted-foreground">
+            <div className="flex-1 flex items-center justify-center bg-muted/50 dark:bg-muted/20 rounded-lg text-muted-foreground border border-border">
               Selecciona una llamada para ver la transcripción.
             </div>
           )}
         </div>
       </div>
       {/* Call Action Selector and Agent Selector at the bottom */}
-      <div className="p-4 border-t bg-white flex items-center gap-2 mt-4">
+      <div className="p-4 border-t border-border bg-background dark:bg-card flex items-center gap-2 mt-4">
         {/* Agent Selector */}
         <Select onValueChange={setSelectedAgentId} value={selectedAgentId || ''} disabled={agentsLoading || isInitiatingCall}>
           <SelectTrigger className="w-1/3">
@@ -250,5 +255,20 @@ export const CallHistoryAndTranscriptionView = ({ clientId, filterDays }: CallHi
         </Button>
       </div>
     </div>
+  );
+};
+
+// Componente principal que envuelve con AgentsLoader
+// ✅ NECESITA AGENTES: Este componente permite iniciar llamadas, por lo que necesita
+// cargar los agentes completos para mostrar en el selector de agentes
+export const CallHistoryAndTranscriptionView = ({ clientId, filterDays }: CallHistoryAndTranscriptionViewProps) => {
+  return (
+    <AgentsLoader 
+      autoLoad={true} 
+      showLoading={true}
+      onLoaded={() => console.log('🎯 [CALL_HISTORY] Agents loaded for call initiation')}
+    >
+      <CallHistoryContent clientId={clientId} filterDays={filterDays} />
+    </AgentsLoader>
   );
 };
