@@ -12,7 +12,7 @@ const testPayload = {
   call_name: "TEST - Verification Call - " + new Date().toISOString(),
   agent_id: AGENT_ID,
   agent_phone_number_id: PHONE_ID,
-  scheduled_time_unix: Math.floor(Date.now() / 1000) + 300, // 5 minutos en el futuro para no hacer llamada real
+  scheduled_time_unix: 5,
   recipients: [
     {
       phone_number: "+50767891234", // Número de prueba

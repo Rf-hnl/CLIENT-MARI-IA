@@ -151,17 +151,16 @@ export async function POST(request: NextRequest) {
       return `+${digits}`;
     }
 
-    // 5. Preparar payload según la nueva documentación de ElevenLabs
-    // CAMBIOS desde la versión anterior:
-    // - conversation_initiation_client_data ahora va DENTRO de cada recipient
-    // - dynamicVariables cambió a dynamic_variables (snake_case)
-    // - Se eliminó max_duration (no existe en la nueva API)
-    // - La respuesta ahora devuelve 'id' en lugar de 'call_id'
+    // 5. Preparar payload según la documentación de ElevenLabs para batch calling
+    // ENDPOINT CORRECTO: /v1/convai/batch-calling/submit (usado para llamadas individuales y batch)
+    // - agent_phone_number_id es correcto para batch calling
+    // - conversation_initiation_client_data con dynamic_variables
+    // - recipients array con un solo recipient para llamada individual
     const elevenLabsPayload = {
       call_name: `${callType} - ${clientData.name} - ${new Date().toISOString()}`,
       agent_id: elevenLabsAgentId,
       agent_phone_number_id: elevenLabsConfig.phoneId,
-      scheduled_time_unix: Math.floor(Date.now() / 1000),  // Lanza la llamada inmediatamente
+      scheduled_time_unix: 5,
       recipients: [
         {
           phone_number: formatPanamaPhone(clientData.phone),
@@ -170,7 +169,8 @@ export async function POST(request: NextRequest) {
               call_type: callType,  // Tipo de acción de llamada seleccionada
               phone: clientData.phone,
               name: clientData.name,
-              company: clientData.employer || '',
+              company: process.env.COMPANY_NAME || 'HYPERNOVA LABS',
+              company_employer: clientData.employer || '',
               email: clientData.email || '',
               national_id: clientData.national_id,
               address: clientData.address || '',
@@ -178,48 +178,83 @@ export async function POST(request: NextRequest) {
               province: clientData.province || '',
               postal_code: clientData.postal_code || '',
               country: clientData.country || '',
-              debt: clientData.debt,
+              debt: clientData.debt.toString(),
               status: clientData.status,
               loan_letter: clientData.loan_letter,
               payment_date: clientData.payment_date
                 ? new Date(clientData.payment_date._seconds * 1000).toISOString()
                 : '',
-              installment_amount: clientData.installment_amount,
-              pending_installments: clientData.pending_installments,
+              installment_amount: clientData.installment_amount.toString(),
+              pending_installments: clientData.pending_installments.toString(),
               due_date: clientData.due_date
                 ? new Date(clientData.due_date._seconds * 1000).toISOString()
                 : '',
               loan_start_date: clientData.loan_start_date
                 ? new Date(clientData.loan_start_date._seconds * 1000).toISOString()
                 : '',
-              days_overdue: clientData.days_overdue,
+              days_overdue: clientData.days_overdue.toString(),
               last_payment_date: clientData.last_payment_date
                 ? new Date(clientData.last_payment_date._seconds * 1000).toISOString()
                 : '',
-              last_payment_amount: clientData.last_payment_amount,
-              credit_score: clientData.credit_score,
+              last_payment_amount: clientData.last_payment_amount.toString(),
+              credit_score: clientData.credit_score.toString(),
               risk_category: clientData.risk_category,
-              credit_limit: clientData.credit_limit,
-              available_credit: clientData.available_credit,
+              credit_limit: clientData.credit_limit.toString(),
+              available_credit: clientData.available_credit.toString(),
               employment_status: clientData.employment_status || '',
               position: clientData.position || '',
-              monthly_income: clientData.monthly_income || 0,
-              employment_verified: clientData.employment_verified || false,
+              monthly_income: clientData.monthly_income ? clientData.monthly_income.toString() : '0',
+              employment_verified: clientData.employment_verified ? 'true' : 'false',
               preferred_contact_method: clientData.preferred_contact_method || '',
               best_contact_time: clientData.best_contact_time || '',
-              response_score: clientData.response_score || 0,
-              recovery_probability: clientData.recovery_probability,
+              response_score: clientData.response_score ? clientData.response_score.toString() : '0',
+              recovery_probability: clientData.recovery_probability.toString(),
               collection_strategy: clientData.collection_strategy || '',
               notes: clientData.notes || '',
               internal_notes: clientData.internal_notes || '',
-              tags: clientData.tags || []
+              tags: clientData.tags ? clientData.tags.join(', ') : ''
             }
           }
         }
       ]
     };
 
-    // 6. Llamada a la API de ElevenLabs
+    // =====================================================================
+    // 🚀 ELEVENLABS API REQUEST - DEBUGGING INFORMATION
+    // =====================================================================
+    console.log('');
+    console.log('='.repeat(80));
+    console.log('🚀 INICIANDO LLAMADA A ELEVENLABS API');
+    console.log('='.repeat(80));
+    console.log('');
+    
+    console.log('📍 ENDPOINT:');
+    console.log('   URL: https://api.elevenlabs.io/v1/convai/batch-calling/submit');
+    console.log('   Method: POST');
+    console.log('');
+    
+    console.log('🔑 CONFIGURACIÓN:');
+    console.log('   Agent ID:', elevenLabsAgentId);
+    console.log('   Phone ID:', elevenLabsConfig.phoneId);
+    console.log('   API Key:', elevenLabsConfig.apiKey ? `${elevenLabsConfig.apiKey.substring(0, 8)}...` : 'NO CONFIGURADA');
+    console.log('');
+    
+    console.log('📞 DATOS DEL CLIENTE:');
+    console.log('   Nombre:', clientData.name);
+    console.log('   Teléfono original:', clientData.phone);
+    console.log('   Teléfono formateado:', formatPanamaPhone(clientData.phone));
+    console.log('   ID Nacional:', clientData.national_id);
+    console.log('   Deuda:', clientData.debt);
+    console.log('   Tipo de llamada:', callType);
+    console.log('');
+    
+    console.log('📦 PAYLOAD COMPLETO ENVIADO A ELEVENLABS:');
+    console.log('-'.repeat(50));
+    console.log(JSON.stringify(elevenLabsPayload, null, 2));
+    console.log('-'.repeat(50));
+    console.log('');
+
+    // 6. Llamada a la API de ElevenLabs (ENDPOINT BATCH CALLING)
     const response = await fetch(
       'https://api.elevenlabs.io/v1/convai/batch-calling/submit',
       {
@@ -232,8 +267,37 @@ export async function POST(request: NextRequest) {
       }
     );
 
+    // =====================================================================
+    // 📥 ELEVENLABS API RESPONSE - DEBUGGING INFORMATION
+    // =====================================================================
+    console.log('='.repeat(80));
+    console.log('📥 RESPUESTA DE ELEVENLABS API');
+    console.log('='.repeat(80));
+    console.log('');
+    
+    console.log('📊 STATUS:');
+    console.log('   Status Code:', response.status);
+    console.log('   Status Text:', response.statusText);
+    console.log('   OK:', response.ok);
+    console.log('');
+    
+    console.log('📋 HEADERS:');
+    const headers = Object.fromEntries(response.headers.entries());
+    Object.entries(headers).forEach(([key, value]) => {
+      console.log(`   ${key}: ${value}`);
+    });
+    console.log('');
+
     if (!response.ok) {
-      const err = await response.json();
+      const err = await response.json().catch(() => ({ error: 'No se pudo parsear respuesta de error' }));
+      
+      console.log('❌ ERROR DE ELEVENLABS:');
+      console.log('-'.repeat(50));
+      console.log('Status Code:', response.status);
+      console.log('Error Body:');
+      console.log(JSON.stringify(err, null, 2));
+      console.log('-'.repeat(50));
+      console.log('');
       
       // Guardar llamada fallida en callLogs
       const failedCallLog: ICallLog = {
@@ -251,7 +315,7 @@ export async function POST(request: NextRequest) {
         notes: `Error ElevenLabs (${response.status}): ${JSON.stringify(err)}`
       };
 
-      console.log('❌ [FAILED_CALL] Guardando llamada fallida:', JSON.stringify(failedCallLog, null, 2));
+      console.log('💾 [FAILED_CALL] Guardando llamada fallida:', JSON.stringify(failedCallLog, null, 2));
       
       // Guardar la llamada fallida
       await saveCallLog(clientRef, failedCallLog);
@@ -260,14 +324,30 @@ export async function POST(request: NextRequest) {
         {
           success: false,
           error: 'Error al iniciar llamada en ElevenLabs',
-          details: err
+          details: err,
+          statusCode: response.status,
+          statusText: response.statusText
         },
         { status: response.status }
       );
     }
 
     const result = await response.json();
-    const callId = result.id; // Cambió de call_id a id según la nueva documentación
+    
+    console.log('✅ RESPUESTA EXITOSA DE ELEVENLABS:');
+    console.log('-'.repeat(50));
+    console.log('Response Body Completo:');
+    console.log(JSON.stringify(result, null, 2));
+    console.log('-'.repeat(50));
+    console.log('');
+    
+    const callId = result.id; // Para batch calling, ElevenLabs devuelve id del batch job
+    console.log('🔍 EXTRACCIÓN DE CALL ID:');
+    console.log('   Campo buscado: id (batch job id)');
+    console.log('   Valor extraído:', callId);
+    console.log('   Tipo:', typeof callId);
+    console.log('');
+    
     if (!callId) {
       // Guardar llamada fallida por falta de ID
       const failedCallLog: ICallLog = {
