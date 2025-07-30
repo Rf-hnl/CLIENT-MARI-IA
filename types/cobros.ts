@@ -61,6 +61,8 @@ export interface IBatchCallRecipient {
   ended_at_unix?: number;
   started_at?: string | null;
   ended_at?: string | null;
+  created_at_unix?: number; // Add created_at_unix
+  created_at?: string | null; // Add created_at
   
   // Duración
   duration_seconds?: number;

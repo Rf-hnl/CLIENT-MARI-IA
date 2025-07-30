@@ -239,7 +239,7 @@ export async function POST(request: NextRequest) {
       const failedCallLog: ICallLog = {
         id: `failed_${Date.now()}_${clientId}`,
         clientId,
-        timestamp: admin.firestore.FieldValue.serverTimestamp() as any,
+        timestamp: new Date(),
         callType,
         durationMinutes: 0,
         agentId: localAgent.id,
@@ -273,7 +273,7 @@ export async function POST(request: NextRequest) {
       const failedCallLog: ICallLog = {
         id: `no_id_${Date.now()}_${clientId}`,
         clientId,
-        timestamp: admin.firestore.FieldValue.serverTimestamp() as any,
+        timestamp: new Date(),
         callType,
         durationMinutes: 0,
         agentId: localAgent.id,
@@ -303,7 +303,7 @@ export async function POST(request: NextRequest) {
     const callLog: ICallLog = {
       id: callId,
       clientId,
-      timestamp: admin.firestore.FieldValue.serverTimestamp() as any,
+      timestamp: new Date(),
       callType,
       durationMinutes: 0,
       agentId: localAgent.id,
@@ -342,7 +342,7 @@ export async function POST(request: NextRequest) {
         const errorCallLog: ICallLog = {
           id: `error_${Date.now()}_${clientId}`,
           clientId,
-          timestamp: admin.firestore.FieldValue.serverTimestamp() as any,
+          timestamp: new Date(),
           callType,
           durationMinutes: 0,
           agentId: localAgent?.id || agentId,

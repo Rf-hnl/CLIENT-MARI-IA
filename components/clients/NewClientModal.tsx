@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +16,7 @@ import { AlertCircle, User, MapPin, Briefcase, Phone, FileText, Plus, Loader2, Z
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useClients } from '@/modules/clients/hooks/useClients';
 import { IClient } from '@/modules/clients/types/clients';
+import { FormField } from './FormField';
 
 // Tipos para el formulario
 interface NewClientFormData {
@@ -102,22 +103,23 @@ export function NewClientModal({ trigger }: NewClientModalProps) {
   
   const { addClient, refetch } = useClients();
 
-  // Manejar cambios en campos de texto
-  const handleInputChange = (field: keyof NewClientFormData, value: string | boolean) => {
+  // Manejar cambios en campos de texto (optimizado con useCallback)
+  const handleInputChange = useCallback((field: keyof NewClientFormData, value: string | boolean) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
     }));
     
     // Limpiar error del campo cuando el usuario empiece a escribir
-    if (errors[field]) {
-      setErrors(prev => {
+    setErrors(prev => {
+      if (prev[field]) {
         const newErrors = { ...prev };
         delete newErrors[field];
         return newErrors;
-      });
-    }
-  };
+      }
+      return prev;
+    });
+  }, []);
 
   // Agregar tag
   const handleAddTag = () => {
@@ -139,7 +141,7 @@ export function NewClientModal({ trigger }: NewClientModalProps) {
   };
 
   // Auto-rellenar formulario con datos de prueba (solo en desarrollo)
-  const handleAutoFill = () => {
+  const handleAutoFill = useCallback(() => {
     const sampleData: NewClientFormData = {
       // Development - ID personalizado aleatorio
       customId: `test_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
@@ -149,7 +151,7 @@ export function NewClientModal({ trigger }: NewClientModalProps) {
       national_id: '8-123-456',
       phone: '+507 6311-6918',
       debt: '8500.75',
-      status: 'overdue',
+      status: 'overdue', // Cliente con atraso real
       loan_letter: 'PREST-2024-0456',
       
       // Recommended fields
@@ -168,16 +170,16 @@ export function NewClientModal({ trigger }: NewClientModalProps) {
       position: 'Desarrollador Senior',
       employment_verified: true,
       best_contact_time: '9:00 AM - 6:00 PM (L-V)',
-      response_score: '8',
-      collection_strategy: 'Contacto directo mensual',
-      notes: 'Cliente confiable con historial de pagos. Prefiere comunicación por WhatsApp.',
-      internal_notes: 'Prioridad alta para seguimiento. Responde mejor en horarios laborales.',
-      tags: ['alta-prioridad', 'whatsapp-preferido', 'pago-regular']
+      response_score: '3',
+      collection_strategy: 'Seguimiento intensivo cada 3 días - promesas incumplidas',
+      notes: 'Cliente con atraso en pagos. Prefiere comunicación por WhatsApp pero no responde consistentemente.',
+      internal_notes: 'Cliente con 45 días de atraso. Historial de promesas incumplidas. Requiere seguimiento intensivo.',
+      tags: ['atraso-45-dias', 'whatsapp-preferido', 'seguimiento-intensivo', 'promesas-incumplidas']
     };
 
     setFormData(sampleData);
     setErrors({}); // Limpiar errores
-  };
+  }, []);
 
   // Validar formulario
   const validateForm = (): boolean => {
@@ -283,37 +285,6 @@ export function NewClientModal({ trigger }: NewClientModalProps) {
     }
   };
 
-  // Componente de campo con error
-  const FormField = ({ 
-    label, 
-    field, 
-    required = false, 
-    children, 
-    description 
-  }: { 
-    label: string; 
-    field: string; 
-    required?: boolean; 
-    children: React.ReactNode;
-    description?: string;
-  }) => (
-    <div className="space-y-2">
-      <Label htmlFor={field} className="flex items-center gap-1">
-        {label}
-        {required && <span className="text-red-500">*</span>}
-      </Label>
-      {description && (
-        <p className="text-xs text-muted-foreground">{description}</p>
-      )}
-      {children}
-      {errors[field] && (
-        <p className="text-xs text-red-600 flex items-center gap-1">
-          <AlertCircle className="h-3 w-3" />
-          {errors[field]}
-        </p>
-      )}
-    </div>
-  );
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -373,7 +344,7 @@ export function NewClientModal({ trigger }: NewClientModalProps) {
                 </CardTitle>
               </CardHeader>
               <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField label="Nombre Completo" field="name" required>
+                <FormField label="Nombre Completo" field="name" required errors={errors}>
                   <Input
                     id="name"
                     value={formData.name}
@@ -382,7 +353,7 @@ export function NewClientModal({ trigger }: NewClientModalProps) {
                   />
                 </FormField>
 
-                <FormField label="Cédula de Identidad" field="national_id" required>
+                <FormField label="Cédula de Identidad" field="national_id" required errors={errors}>
                   <Input
                     id="national_id"
                     value={formData.national_id}
@@ -391,7 +362,7 @@ export function NewClientModal({ trigger }: NewClientModalProps) {
                   />
                 </FormField>
 
-                <FormField label="Teléfono Principal" field="phone" required>
+                <FormField label="Teléfono Principal" field="phone" required errors={errors}>
                   <Input
                     id="phone"
                     value={formData.phone}
@@ -400,7 +371,7 @@ export function NewClientModal({ trigger }: NewClientModalProps) {
                   />
                 </FormField>
 
-                <FormField label="Monto de la Deuda" field="debt" required>
+                <FormField label="Monto de la Deuda" field="debt" required errors={errors}>
                   <Input
                     id="debt"
                     type="number"
@@ -411,7 +382,7 @@ export function NewClientModal({ trigger }: NewClientModalProps) {
                   />
                 </FormField>
 
-                <FormField label="Estado del Préstamo" field="status" required>
+                <FormField label="Estado del Préstamo" field="status" required errors={errors}>
                   <Select value={formData.status} onValueChange={(value) => handleInputChange('status', value)}>
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccionar estado" />
@@ -424,7 +395,7 @@ export function NewClientModal({ trigger }: NewClientModalProps) {
                   </Select>
                 </FormField>
 
-                <FormField label="Número de Préstamo" field="loan_letter" required>
+                <FormField label="Número de Préstamo" field="loan_letter" required errors={errors}>
                   <Input
                     id="loan_letter"
                     value={formData.loan_letter}
@@ -446,7 +417,7 @@ export function NewClientModal({ trigger }: NewClientModalProps) {
                 </CardTitle>
               </CardHeader>
               <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField label="Correo Electrónico" field="email" description="Importante para opciones de contacto">
+                <FormField label="Correo Electrónico" field="email" description="Importante para opciones de contacto" errors={errors}>
                   <Input
                     id="email"
                     type="email"
@@ -456,7 +427,7 @@ export function NewClientModal({ trigger }: NewClientModalProps) {
                   />
                 </FormField>
 
-                <FormField label="Método de Contacto Preferido" field="preferred_contact_method">
+                <FormField label="Método de Contacto Preferido" field="preferred_contact_method" errors={errors}>
                   <Select value={formData.preferred_contact_method} onValueChange={(value) => handleInputChange('preferred_contact_method', value)}>
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccionar método" />
@@ -479,7 +450,7 @@ export function NewClientModal({ trigger }: NewClientModalProps) {
                 </CardTitle>
               </CardHeader>
               <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField label="Dirección Completa" field="address" description="Necesaria para gestión de cobranza" className="md:col-span-2">
+                <FormField label="Dirección Completa" field="address" description="Necesaria para gestión de cobranza" errors={errors}>
                   <Input
                     id="address"
                     value={formData.address}
@@ -488,7 +459,7 @@ export function NewClientModal({ trigger }: NewClientModalProps) {
                   />
                 </FormField>
 
-                <FormField label="Ciudad" field="city">
+                <FormField label="Ciudad" field="city" errors={errors}>
                   <Input
                     id="city"
                     value={formData.city}
@@ -497,7 +468,7 @@ export function NewClientModal({ trigger }: NewClientModalProps) {
                   />
                 </FormField>
 
-                <FormField label="Provincia" field="province">
+                <FormField label="Provincia" field="province" errors={errors}>
                   <Input
                     id="province"
                     value={formData.province}
@@ -516,7 +487,7 @@ export function NewClientModal({ trigger }: NewClientModalProps) {
                 </CardTitle>
               </CardHeader>
               <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField label="Estado Laboral" field="employment_status" description="Crítico para evaluación de riesgo">
+                <FormField label="Estado Laboral" field="employment_status" description="Crítico para evaluación de riesgo" errors={errors}>
                   <Select value={formData.employment_status} onValueChange={(value) => handleInputChange('employment_status', value)}>
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccionar estado" />
@@ -531,7 +502,7 @@ export function NewClientModal({ trigger }: NewClientModalProps) {
                   </Select>
                 </FormField>
 
-                <FormField label="Ingresos Mensuales" field="monthly_income" description="Necesarios para calcular capacidad de pago">
+                <FormField label="Ingresos Mensuales" field="monthly_income" description="Necesarios para calcular capacidad de pago" errors={errors}>
                   <Input
                     id="monthly_income"
                     type="number"
@@ -556,7 +527,7 @@ export function NewClientModal({ trigger }: NewClientModalProps) {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <FormField label="Código Postal" field="postal_code">
+                  <FormField label="Código Postal" field="postal_code" errors={errors}>
                     <Input
                       id="postal_code"
                       value={formData.postal_code}
@@ -565,7 +536,7 @@ export function NewClientModal({ trigger }: NewClientModalProps) {
                     />
                   </FormField>
 
-                  <FormField label="País" field="country">
+                  <FormField label="País" field="country" errors={errors}>
                     <Input
                       id="country"
                       value={formData.country}
@@ -584,7 +555,7 @@ export function NewClientModal({ trigger }: NewClientModalProps) {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <FormField label="Empleador" field="employer">
+                  <FormField label="Empleador" field="employer" errors={errors}>
                     <Input
                       id="employer"
                       value={formData.employer}
@@ -593,7 +564,7 @@ export function NewClientModal({ trigger }: NewClientModalProps) {
                     />
                   </FormField>
 
-                  <FormField label="Cargo/Posición" field="position">
+                  <FormField label="Cargo/Posición" field="position" errors={errors}>
                     <Input
                       id="position"
                       value={formData.position}
@@ -622,7 +593,7 @@ export function NewClientModal({ trigger }: NewClientModalProps) {
                 </CardTitle>
               </CardHeader>
               <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField label="Mejor Horario de Contacto" field="best_contact_time">
+                <FormField label="Mejor Horario de Contacto" field="best_contact_time" errors={errors}>
                   <Input
                     id="best_contact_time"
                     value={formData.best_contact_time}
@@ -631,7 +602,7 @@ export function NewClientModal({ trigger }: NewClientModalProps) {
                   />
                 </FormField>
 
-                <FormField label="Puntuación de Respuesta (0-10)" field="response_score">
+                <FormField label="Puntuación de Respuesta (0-10)" field="response_score" errors={errors}>
                   <Input
                     id="response_score"
                     type="number"
@@ -653,7 +624,7 @@ export function NewClientModal({ trigger }: NewClientModalProps) {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <FormField label="Estrategia de Cobranza" field="collection_strategy">
+                <FormField label="Estrategia de Cobranza" field="collection_strategy" errors={errors}>
                   <Input
                     id="collection_strategy"
                     value={formData.collection_strategy}
@@ -662,7 +633,7 @@ export function NewClientModal({ trigger }: NewClientModalProps) {
                   />
                 </FormField>
 
-                <FormField label="Notas Generales" field="notes">
+                <FormField label="Notas Generales" field="notes" errors={errors}>
                   <Textarea
                     id="notes"
                     value={formData.notes}
@@ -672,7 +643,7 @@ export function NewClientModal({ trigger }: NewClientModalProps) {
                   />
                 </FormField>
 
-                <FormField label="Notas Internas" field="internal_notes" description="Solo visibles para el equipo interno">
+                <FormField label="Notas Internas" field="internal_notes" description="Solo visibles para el equipo interno" errors={errors}>
                   <Textarea
                     id="internal_notes"
                     value={formData.internal_notes}
@@ -690,7 +661,7 @@ export function NewClientModal({ trigger }: NewClientModalProps) {
                       value={newTag}
                       onChange={(e) => setNewTag(e.target.value)}
                       placeholder="Agregar etiqueta..."
-                      onKeyPress={(e) => e.key === 'Enter' && handleAddTag()}
+                      onKeyDown={(e) => e.key === 'Enter' && handleAddTag()}
                     />
                     <Button type="button" onClick={handleAddTag} size="sm">
                       <Plus className="h-4 w-4" />
@@ -747,6 +718,7 @@ export function NewClientModal({ trigger }: NewClientModalProps) {
                       label="ID Personalizado del Cliente (Desarrollo)" 
                       field="customId"
                       description="Solo disponible en modo desarrollo. Si se deja vacío, se generará automáticamente."
+                      errors={errors}
                     >
                       <Input
                         id="customId"

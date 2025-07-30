@@ -137,7 +137,7 @@ export interface ICustomerInteractions {
 export interface ICallLog {
   id: string; // Document ID could also be implicitly handled by Firebase
   clientId: string;
-  timestamp: IFirebaseTimestamp;
+  timestamp: IFirebaseTimestamp | Date;
   /**
    * Type of call, e.g., "collection", "interaction", "support", "follow-up", etc.
    * Defined as a general string for flexibility.

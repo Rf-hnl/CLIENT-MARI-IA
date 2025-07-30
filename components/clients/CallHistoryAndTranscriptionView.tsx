@@ -15,6 +15,19 @@ import { useClients } from '@/modules/clients/hooks/useClients'; // Import useCl
 import { ITenantElevenLabsAgent } from '@/types/agents'; // Import agent type
 import { toast } from 'sonner'; // Assuming sonner is used for toasts
 
+// Helper function to convert timestamp to Date object
+const getTimestampAsDate = (timestamp: IFirebaseTimestamp | Date): Date => {
+  if (timestamp instanceof Date) {
+    return timestamp;
+  }
+  // If it's a Firebase timestamp
+  if (timestamp && typeof timestamp === 'object' && '_seconds' in timestamp) {
+    return new Date(timestamp._seconds * 1000);
+  }
+  // Fallback to current date if invalid
+  return new Date();
+};
+
 // Temporary interface until we implement full call conversation system
 interface IPhoneCallConversation {
   id: string;
@@ -23,7 +36,7 @@ interface IPhoneCallConversation {
   conversationSegments?: any[];
   // Add other fields that might come from the backend for display
   callDirection?: 'inbound' | 'outbound';
-  startTime?: IFirebaseTimestamp;
+  startTime?: IFirebaseTimestamp | Date;
   duration?: number;
   status?: string;
   turns?: any[]; // For transcription
@@ -119,8 +132,8 @@ const CallHistoryContent = ({ clientId, filterDays }: CallHistoryAndTranscriptio
       const lastTurnTimestamp = (conv.turns && conv.turns.length > 0) ? conv.turns[conv.turns.length - 1]?.timestamp : undefined;
       if (!lastTurnTimestamp) return false;
 
-      // Convert string timestamp to Date object
-      const conversationDate = new Date(lastTurnTimestamp);
+      // Convert timestamp to Date object using helper function
+      const conversationDate = getTimestampAsDate(lastTurnTimestamp);
 
       if (filterDays === null) {
         return true; // Show all history

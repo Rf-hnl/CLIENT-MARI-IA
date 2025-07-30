@@ -17,7 +17,7 @@ interface IPhoneCallConversation {
   conversationSegments?: any[];
   // Add other fields that might come from the backend for display
   callDirection?: 'inbound' | 'outbound';
-  startTime?: IFirebaseTimestamp;
+  startTime?: IFirebaseTimestamp | Date;
   duration?: number;
   status?: string;
   turns?: {

@@ -18,9 +18,15 @@ export function safeFormatDate(timestamp: any): string {
       return formatDate(timestamp.toDate().toISOString());
     }
     
-    // Si es una fecha ya serializada
+    // Si es una fecha ya serializada (formato Firebase)
     if (timestamp && timestamp.seconds) {
       const date = new Date(timestamp.seconds * 1000);
+      return formatDate(date.toISOString());
+    }
+    
+    // Si es una fecha serializada con _seconds (nuestro formato personalizado)
+    if (timestamp && timestamp._seconds) {
+      const date = new Date(timestamp._seconds * 1000);
       return formatDate(date.toISOString());
     }
     
@@ -51,9 +57,15 @@ export function safeToISOString(timestamp: any): string | null {
       return timestamp.toDate().toISOString();
     }
     
-    // Si es una fecha ya serializada
+    // Si es una fecha ya serializada (formato Firebase)
     if (timestamp && timestamp.seconds) {
       const date = new Date(timestamp.seconds * 1000);
+      return date.toISOString();
+    }
+    
+    // Si es una fecha serializada con _seconds (nuestro formato personalizado)
+    if (timestamp && timestamp._seconds) {
+      const date = new Date(timestamp._seconds * 1000);
       return date.toISOString();
     }
     
