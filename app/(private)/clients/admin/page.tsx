@@ -286,7 +286,7 @@ export default function ClientsAdmin() {
         <div className="bg-card rounded-lg border p-4">
           <div className="flex items-center gap-2">
             <div className="h-8 w-8 bg-purple-100 rounded-lg flex items-center justify-center">
-              <span className="text-purple-600 font-semibold text-xs">
+              <span className="text-purple-600 px-4 font-semibold text-xs">
                 ${Math.round(totalDebt / 1000)}K
               </span>
             </div>

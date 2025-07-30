@@ -8,10 +8,11 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PhoneCall, Loader2 } from 'lucide-react'; // Added Loader2 for loading state
 import { PhoneCallList, PhoneCallTranscription } from '@/components/clients/PhoneCallHistory';
-import { ICallLog, IFirebaseTimestamp } from '@/modules/clients/types/clients';
+import { ICallLog, IFirebaseTimestamp, IClient } from '@/modules/clients/types/clients';
 import { useAgentsContext } from '@/modules/agents/context/AgentsContext'; // Import useAgentsContext
 import { AgentsLoader } from '@/modules/agents/components/AgentsLoader'; // Import AgentsLoader for on-demand loading
 import { useClients } from '@/modules/clients/hooks/useClients'; // Import useClients for tenant/org IDs
+import { useElevenLabsConfig } from '@/modules/agents/hooks/useElevenLabsConfig'; // Import ElevenLabs hook
 import { ITenantElevenLabsAgent } from '@/types/agents'; // Import agent type
 import { toast } from 'sonner'; // Assuming sonner is used for toasts
 
@@ -26,6 +27,16 @@ const getTimestampAsDate = (timestamp: IFirebaseTimestamp | Date): Date => {
   }
   // Fallback to current date if invalid
   return new Date();
+};
+
+// Helper function to format Panama phone numbers
+const formatPanamaPhone = (raw: string): string => {
+  let digits = raw.replace(/\D/g, '');
+  if (!digits.startsWith('507')) {
+    if (digits.startsWith('0')) digits = digits.slice(1);
+    digits = '507' + digits;
+  }
+  return `+${digits}`;
 };
 
 // Temporary interface until we implement full call conversation system
@@ -49,8 +60,12 @@ interface CallHistoryAndTranscriptionViewProps {
 
 // Componente interno que usa los agentes
 const CallHistoryContent = ({ clientId, filterDays }: CallHistoryAndTranscriptionViewProps) => {
-  const { currentTenant, currentOrganization } = useClients(); // Use useClients for tenant/org IDs
+  const { currentTenant, currentOrganization, clients } = useClients(); // Use useClients for tenant/org IDs
   const { agents, loading: agentsLoading, error: agentsError } = useAgentsContext();
+  const { config: elevenLabsConfig } = useElevenLabsConfig({ 
+    tenantId: currentTenant?.id || null, 
+    uid: null 
+  });
   
   const [allConversations, setAllConversations] = useState<IPhoneCallConversation[]>([]);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
@@ -60,6 +75,9 @@ const CallHistoryContent = ({ clientId, filterDays }: CallHistoryAndTranscriptio
 
   const tenantId = currentTenant?.id;
   const organizationId = currentOrganization?.id;
+
+  // Get client data
+  const clientData = clients.find(client => client.id === clientId);
 
   // Fetch call history from the backend
   useEffect(() => {
@@ -77,17 +95,82 @@ const CallHistoryContent = ({ clientId, filterDays }: CallHistoryAndTranscriptio
         const result = await response.json();
 
         if (result.success) {
-          // Map ICallLog to IPhoneCallConversation
-          const fetchedConversations: IPhoneCallConversation[] = result.data.map((log: ICallLog) => ({
-            id: log.id,
-            clientId: log.clientId,
-            callLog: log,
-            callDirection: log.callType.includes('outbound') ? 'outbound' : 'inbound', // Infer direction
-            startTime: log.timestamp,
-            duration: log.durationMinutes * 60, // Convert minutes to seconds for consistency
-            status: log.transcriptionStatus, // Use transcriptionStatus as call status
-            turns: log.transcription ? [{ role: 'bot', content: log.transcription, timestamp: log.timestamp }] : [], // Simple representation
-          }));
+          // Map ICallLog to IPhoneCallConversation and fetch transcriptions
+          const fetchedConversations: IPhoneCallConversation[] = await Promise.all(
+            result.data.map(async (log: ICallLog) => {
+              let turns: any[] = [];
+              
+              // Si la llamada fue exitosa y tiene elevenLabsJobId (batch ID), obtener transcripción
+              if (log.outcome === 'initiated' && log.elevenLabsJobId && log.elevenLabsJobId !== '' && clientData) {
+                try {
+                  console.log(`🎯 [BATCH_TO_CONV] Procesando batch: ${log.elevenLabsJobId}`);
+                  
+                  // Usar el API endpoint ya existente para obtener batch-to-conversation
+                  const clientPhone = formatPanamaPhone(clientData.phone);
+                  const batchConvResponse = await fetch(`/api/client/calls/batch-to-conversation/${log.elevenLabsJobId}`, {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ tenantId, clientPhone }),
+                  });
+                  
+                  if (batchConvResponse.ok) {
+                    const batchConvResult = await batchConvResponse.json();
+                    console.log(`📦 [BATCH_TO_CONV] Resultado:`, JSON.stringify(batchConvResult, null, 2));
+                    
+                    if (batchConvResult.success && batchConvResult.data) {
+                      const conversationData = batchConvResult.data.conversation_detail;
+                      console.log(`🔍 [TRANSCRIPTION] Conversation status: ${conversationData.status}`);
+                      console.log(`📝 [TRANSCRIPTION] Transcript length: ${conversationData.transcript?.length || 0}`);
+                      
+                      // Construir turns desde la conversación de ElevenLabs
+                      if (conversationData.transcript && Array.isArray(conversationData.transcript) && conversationData.transcript.length > 0) {
+                        turns = conversationData.transcript.map((turn: any, index: number) => ({
+                          id: `${batchConvResult.data.conversation_id}_turn_${index}`,
+                          role: turn.role === 'user' ? 'client' : 'bot',
+                          content: turn.message || '',
+                          timestamp: log.timestamp,
+                          llmResponseTime: turn.time_in_call_secs ? turn.time_in_call_secs * 1000 : undefined
+                        }));
+                        console.log(`✅ [TRANSCRIPTION] ${turns.length} turns creados para: ${batchConvResult.data.conversation_id}`);
+                      } else if (conversationData.analysis?.transcript_summary) {
+                        // Fallback: usar resumen si no hay transcript detallado
+                        turns = [{
+                          id: `summary_${batchConvResult.data.conversation_id}`,
+                          role: 'bot',
+                          content: conversationData.analysis.transcript_summary,
+                          timestamp: log.timestamp
+                        }];
+                        console.log(`📋 [TRANSCRIPTION] Usando resumen para: ${batchConvResult.data.conversation_id}`);
+                      } else {
+                        console.warn(`⚠️ [TRANSCRIPTION] No hay transcript ni resumen para: ${batchConvResult.data.conversation_id}, status: ${conversationData.status}`);
+                      }
+                    }
+                  } else {
+                    const errorText = await batchConvResponse.text();
+                    console.warn(`⚠️ [BATCH_TO_CONV] HTTP ${batchConvResponse.status} para batch: ${log.elevenLabsJobId}`, errorText);
+                  }
+                } catch (error) {
+                  console.error(`❌ [BATCH_TO_CONV] Error obteniendo transcripción para batch ${log.elevenLabsJobId}:`, error);
+                }
+              } else {
+                console.log(`⏭️ [TRANSCRIPTION] Saltando transcripción para ${log.id}: outcome=${log.outcome}, jobId=${log.elevenLabsJobId}, clientData=${!!clientData}`);
+              }
+              
+              return {
+                id: log.id,
+                clientId: log.clientId,
+                callLog: log,
+                callDirection: log.callType.includes('outbound') ? 'outbound' : 'inbound',
+                startTime: log.timestamp,
+                duration: log.durationMinutes * 60,
+                status: log.transcriptionStatus,
+                turns: turns
+              };
+            })
+          );
+          
           setAllConversations(fetchedConversations);
         } else {
           console.error('Error fetching call history:', result.error);
@@ -102,7 +185,7 @@ const CallHistoryContent = ({ clientId, filterDays }: CallHistoryAndTranscriptio
     };
 
     fetchCallHistory();
-  }, [clientId, tenantId, organizationId, isInitiatingCall]); // Re-fetch when clientId or a call is initiated
+  }, [clientId, tenantId, organizationId, isInitiatingCall, clientData]); // Re-fetch when clientId or a call is initiated
 
   // Set default selected agent if available
   useEffect(() => {
@@ -127,13 +210,8 @@ const CallHistoryContent = ({ clientId, filterDays }: CallHistoryAndTranscriptio
   const conversations = useMemo(() => {
     const now = new Date();
     return allConversations.filter(conv => {
-      // Assuming the last turn's timestamp is the conversation's latest timestamp
-      // Add check for conv.turns existence and length
-      const lastTurnTimestamp = (conv.turns && conv.turns.length > 0) ? conv.turns[conv.turns.length - 1]?.timestamp : undefined;
-      if (!lastTurnTimestamp) return false;
-
-      // Convert timestamp to Date object using helper function
-      const conversationDate = getTimestampAsDate(lastTurnTimestamp);
+      // Use conversation startTime instead of turns timestamp for filtering
+      const conversationDate = getTimestampAsDate(conv.startTime || conv.callLog.timestamp);
 
       if (filterDays === null) {
         return true; // Show all history

@@ -103,9 +103,9 @@ export const PhoneCallTranscription = ({ conversation, onBackToList }: PhoneCall
           conversation.turns.map(turn => {
             const isAgent = turn.role === 'agent';
             const isBot = turn.role === 'bot';
-            const senderName = isAgent ? 'Agente' : (isBot ? 'LLM' : 'Cliente');
-            const avatarFallback = isAgent ? 'AG' : (isBot ? 'AI' : 'CL');
-            const avatarBg = isAgent ? 'bg-primary/20 text-primary dark:bg-primary/30' : (isBot ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300' : 'bg-muted text-muted-foreground');
+            const senderName = isAgent ? 'Agente' : (isBot ? 'Agente' : 'Cliente');
+            const avatarFallback = isAgent ? 'AG' : (isBot ? 'AG' : 'CL');
+            const avatarBg = isAgent ? 'bg-black text-white dark:bg-primary' : (isBot ? 'bg-purple-500 text-white dark:bg-purple-900/50 dark:text-purple-300' : 'bg-muted text-muted-foreground');
 
           return (
             <div
