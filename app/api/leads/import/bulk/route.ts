@@ -34,6 +34,13 @@ export async function POST(request: NextRequest): Promise<NextResponse<BulkImpor
     const body: BulkImportRequest = await request.json();
     const { tenantId, organizationId, csvContent, dryRun = false } = body;
 
+    console.log(`🔍 IMPORTACIÓN - Parámetros recibidos:`, {
+      tenantId,
+      organizationId,
+      dryRun,
+      csvLength: csvContent?.length || 0
+    });
+
     // Validación de parámetros requeridos
     if (!tenantId || !organizationId || !csvContent) {
       return NextResponse.json({
@@ -94,6 +101,9 @@ export async function POST(request: NextRequest): Promise<NextResponse<BulkImpor
     }
 
     // Preparar referencia a la colección
+    const leadsPath = `tenants/${tenantId}/organizations/${organizationId}/leads`;
+    console.log(`📁 IMPORTACIÓN - Guardando leads en: ${leadsPath}`);
+    
     const leadsCollectionRef = adminDb
       .collection('tenants')
       .doc(tenantId)
@@ -160,7 +170,14 @@ export async function POST(request: NextRequest): Promise<NextResponse<BulkImpor
       await batch.commit();
     }
 
-    console.log(`✅ Importación masiva completada: ${importedLeads.length} leads importados`);
+    console.log(`✅ Importación masiva completada:`);
+    console.log(`   📊 ${importedLeads.length} leads importados exitosamente`);
+    console.log(`   📁 Guardados en: ${leadsPath}`);
+    console.log(`   ⚠️ ${errors.length} errores encontrados`);
+    
+    if (importedLeads.length > 0) {
+      console.log(`   📋 Primeros leads importados:`, importedLeads.slice(0, 3).map(l => ({ name: l.name, status: l.status, id: l.id })));
+    }
 
     return NextResponse.json({
       success: true,
@@ -168,7 +185,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<BulkImpor
         importedCount: importedLeads.length,
         skippedCount: processedLeads.length - importedLeads.length,
         errors,
-        stats
+        stats,
+        path: leadsPath // Agregar la ruta en la respuesta
       }
     });
 
