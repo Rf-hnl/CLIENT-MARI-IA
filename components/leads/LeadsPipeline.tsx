@@ -510,16 +510,24 @@ export function LeadsPipeline() {
     };
 
     console.log('📊 Pipeline - Total leads:', leads.length);
+    console.log('🔍 Estados válidos:', Object.keys(grouped));
+    
     leads.forEach(lead => {
-      console.log(`📋 Lead: ${lead.name} - Status: ${lead.status}`);
+      console.log(`📋 Lead: ${lead.name} - Status: "${lead.status}" - Type: ${typeof lead.status}`);
       if (grouped[lead.status]) {
         grouped[lead.status].push(lead);
+        console.log(`✅ Lead ${lead.name} agregado a columna ${lead.status}`);
       } else {
-        console.warn(`⚠️ Status desconocido: ${lead.status} para lead ${lead.name}`);
+        console.warn(`⚠️ Status "${lead.status}" no existe en grouped para lead ${lead.name}`);
+        console.log('🔍 Estados disponibles:', Object.keys(grouped));
       }
     });
 
-    console.log('🗂️ Leads agrupados por status:', Object.entries(grouped).map(([status, items]) => `${status}: ${items.length}`));
+    console.log('🗂️ Leads agrupados por status:');
+    Object.entries(grouped).forEach(([status, items]) => {
+      console.log(`  ${status}: ${items.length} leads`);
+      items.forEach(lead => console.log(`    - ${lead.name}`));
+    });
     return grouped;
   }, [leads]);
 
@@ -554,6 +562,7 @@ export function LeadsPipeline() {
   }, []);
 
   if (isLoading) {
+    console.log('⏳ Pipeline en estado de carga...');
     return (
       <div className="flex items-center justify-center h-96">
         <div className="text-center">
@@ -563,6 +572,8 @@ export function LeadsPipeline() {
       </div>
     );
   }
+
+  console.log('🚀 Pipeline renderizado - Leads disponibles:', leads.length);
 
   return (
     <div className="space-y-6">

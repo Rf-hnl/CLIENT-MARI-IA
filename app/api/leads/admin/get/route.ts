@@ -29,12 +29,22 @@ export async function POST(request: NextRequest) {
     const snapshot = await leadsCollectionRef.get();
     const leads: Record<string, ILead> = {};
 
+    console.log(`🔍 Leyendo ${snapshot.docs.length} documentos de leads desde: ${leadsPath}`);
+
     for (const doc of snapshot.docs) {
       const rawData = doc.data();
+      
+      console.log(`📄 Documento ${doc.id}:`, {
+        hasDataField: !!rawData._data,
+        hasInteractions: !!rawData.leadInteractions,
+        directFields: Object.keys(rawData).slice(0, 5),
+        status: rawData.status || rawData._data?.status
+      });
       
       // Check if document has new structure (ILeadDocument) or old structure (direct ILead)
       if (rawData._data && rawData.leadInteractions !== undefined) {
         // New structure: ILeadDocument with _data and leadInteractions
+        console.log(`📋 Procesando estructura nueva para ${doc.id}`);
         const leadDocument = rawData as ILeadDocument;
         leads[doc.id] = {
           id: doc.id,
@@ -44,12 +54,15 @@ export async function POST(request: NextRequest) {
         } as ILead & { leadInteractions?: any };
       } else {
         // Old structure: Direct ILead data (backward compatibility)
+        console.log(`📋 Procesando estructura directa para ${doc.id}`);
         const leadData = rawData as Omit<ILead, 'id'>;
         leads[doc.id] = {
           id: doc.id,
           ...leadData
         };
       }
+      
+      console.log(`✅ Lead procesado: ${leads[doc.id].name} - Status: ${leads[doc.id].status}`);
     }
 
     // Calcular estadísticas básicas
