@@ -180,18 +180,18 @@ export const convertCSVToLead = (csvData: CSVLeadData): Omit<ILead, 'id'> | null
     source: source,
     
     // Información de contacto
-    email: commercialEmail.includes('@') ? commercialEmail : undefined,
-    preferred_contact_method: 'phone',
+    ...(commercialEmail.includes('@') && { email: commercialEmail }),
+    preferred_contact_method: 'phone' as const,
     
     // Información de negocio
-    company: isCompany ? name : undefined,
-    position: isCompany ? undefined : 'Propietario',
+    ...(isCompany && { company: name }),
+    ...(!isCompany && { position: 'Propietario' }),
     priority: priority,
     
     // Calificación
     qualification_score: qualification_score,
     is_qualified: is_qualified,
-    qualification_notes: csvData.Actividades || undefined,
+    ...(csvData.Actividades && { qualification_notes: csvData.Actividades }),
     
     // Seguimiento
     contact_attempts: 0,
@@ -199,17 +199,16 @@ export const convertCSVToLead = (csvData: CSVLeadData): Omit<ILead, 'id'> | null
     
     // Conversión
     converted_to_client: status === 'won',
-    conversion_value: status === 'won' ? expectedRevenue : undefined,
-    conversion_date: status === 'won' ? now : undefined,
+    ...(status === 'won' && expectedRevenue > 0 && { conversion_value: expectedRevenue }),
+    ...(status === 'won' && { conversion_date: now }),
     
     // Notas y tags
-    notes: csvData.Propiedades || undefined,
+    ...(csvData.Propiedades && { notes: csvData.Propiedades }),
     internal_notes: `Importado de CRM. Etapa original: ${csvData.Etapa}. Probabilidad: ${csvData.Probabilidad}%`,
     tags: csvData.Etiquetas ? csvData.Etiquetas.split(',').map(t => t.trim()) : [],
     
     // Agente asignado
-    assigned_agent_id: undefined,
-    assigned_agent_name: csvData['Equipo de ventas'] || undefined,
+    ...(csvData['Equipo de ventas'] && { assigned_agent_name: csvData['Equipo de ventas'] }),
     
     // Timestamps del sistema
     created_at: now,

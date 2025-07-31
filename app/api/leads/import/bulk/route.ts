@@ -10,6 +10,25 @@ import { adminDb } from '@/lib/firebase/admin';
 import { processCSVFile, validateCSVStructure, generateImportStats, ImportStats } from '@/modules/leads/utils/csvImporter';
 import { ILead } from '@/modules/leads/types/leads';
 
+// Función para limpiar undefined values antes de enviar a Firestore
+function cleanFirestoreData(data: any): any {
+  const cleaned: any = {};
+  
+  for (const [key, value] of Object.entries(data)) {
+    if (value !== undefined) {
+      // Si es un objeto, aplicar recursivamente (para nested objects)
+      if (value !== null && typeof value === 'object' && !Array.isArray(value) && !(value instanceof Date)) {
+        cleaned[key] = cleanFirestoreData(value);
+      } else {
+        cleaned[key] = value;
+      }
+    }
+    // Si es undefined, simplemente no lo incluimos en el objeto limpio
+  }
+  
+  return cleaned;
+}
+
 interface BulkImportRequest {
   tenantId: string;
   organizationId: string;
@@ -128,7 +147,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<BulkImpor
         };
 
         // Convertir timestamps para Firestore
-        const firestoreData = {
+        const rawFirestoreData = {
           ...leadWithId,
           created_at: new Date(leadWithId.created_at._seconds * 1000),
           updated_at: new Date(leadWithId.updated_at._seconds * 1000),
@@ -142,6 +161,9 @@ export async function POST(request: NextRequest): Promise<NextResponse<BulkImpor
             ? new Date(leadWithId.conversion_date._seconds * 1000) 
             : null
         };
+
+        // Limpiar undefined values antes de enviar a Firestore
+        const firestoreData = cleanFirestoreData(rawFirestoreData);
 
         // Debug: mostrar datos que se van a guardar
         console.log(`💾 Guardando lead: ${firestoreData.name} - Status: ${firestoreData.status} - ID: ${firestoreData.id}`);
