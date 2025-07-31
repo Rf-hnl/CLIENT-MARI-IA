@@ -133,6 +133,9 @@ export async function POST(request: NextRequest): Promise<NextResponse<BulkImpor
             : null
         };
 
+        // Debug: mostrar datos que se van a guardar
+        console.log(`💾 Guardando lead: ${firestoreData.name} - Status: ${firestoreData.status} - ID: ${firestoreData.id}`);
+        
         batch.set(leadRef, firestoreData);
         importedLeads.push(leadWithId);
         batchCount++;

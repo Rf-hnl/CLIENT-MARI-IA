@@ -509,12 +509,17 @@ export function LeadsPipeline() {
       nurturing: [], follow_up: [], cold: []
     };
 
+    console.log('📊 Pipeline - Total leads:', leads.length);
     leads.forEach(lead => {
+      console.log(`📋 Lead: ${lead.name} - Status: ${lead.status}`);
       if (grouped[lead.status]) {
         grouped[lead.status].push(lead);
+      } else {
+        console.warn(`⚠️ Status desconocido: ${lead.status} para lead ${lead.name}`);
       }
     });
 
+    console.log('🗂️ Leads agrupados por status:', Object.entries(grouped).map(([status, items]) => `${status}: ${items.length}`));
     return grouped;
   }, [leads]);
 

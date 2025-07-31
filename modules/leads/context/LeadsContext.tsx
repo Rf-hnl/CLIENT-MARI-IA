@@ -136,11 +136,15 @@ export function LeadsProvider({ children }: { children: React.ReactNode }) {
       const leadsArray: ExtendedLead[] = Object.values(data.data || {});
       setLeads(leadsArray);
 
+      // Debug: mostrar leads cargados
+      console.log(`📈 Se cargaron ${leadsArray.length} leads desde ${data.path}`);
+      leadsArray.forEach(lead => {
+        console.log(`🔍 Lead cargado: ${lead.name} - Status: ${lead.status} - ID: ${lead.id}`);
+      });
+
       // Calcular estadísticas
       const calculatedStats = calculateStats(leadsArray);
       setStats(calculatedStats);
-
-      console.log(`📈 Se cargaron ${leadsArray.length} leads desde ${data.path}`);
       
     } catch (err) {
       console.error('Error obteniendo leads:', err);
