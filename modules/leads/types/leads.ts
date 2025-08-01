@@ -13,18 +13,19 @@ export interface IFirebaseTimestamp {
 }
 
 // --- Lead States and Status ---
+// Estados basados en el CSV real del CRM
 export type LeadStatus = 
-  | "new"           // Nuevo prospecto, sin contactar
-  | "contacted"     // Contactado por primera vez
-  | "interested"    // Mostró interés
-  | "qualified"     // Calificado como prospecto válido
-  | "proposal"      // Propuesta enviada
-  | "negotiation"   // En negociación
-  | "won"           // Convertido a cliente
-  | "lost"          // Perdido/rechazado
-  | "nurturing"     // En proceso de nutrición
-  | "follow_up"     // Requiere seguimiento
-  | "cold"          // Prospecto frío
+  | "new"                    // Nuevos Leads / Pendientes (19)
+  | "interested"             // Leads Potenciales / Prioritario (45)
+  | "qualified"              // Calificado - En seguimiento (15)
+  | "follow_up"              // En seguimiento / Sin respuesta (42)
+  | "proposal_current"       // Cotizaciones / Campaña Actual Jun - Jul (17)
+  | "proposal_previous"      // Cotización enviada / Campañas anteriores (3)
+  | "negotiation"            // Negociación / En ajustes (2)
+  | "nurturing"              // A futuro / En pausa (15)
+  | "won"                    // Ganado / Cerrado (5)
+  | "lost"                   // Propuesta declinada (12)
+  | "cold"                   // Leads descartados / No calificados (99)
 
 export type LeadSource = 
   | "website"       // Sitio web

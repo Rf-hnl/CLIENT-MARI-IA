@@ -54,11 +54,13 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 // Imports del sistema de leads
-import { LeadsProvider, useLeads } from '@/modules/leads/context/LeadsContext';
+import { LeadsProvider, useLeads, ExtendedLead } from '@/modules/leads/context/LeadsContext';
 import { useLeadsStats, useLeadSearch, useLeadNavigation, useLeadsAlerts } from '@/modules/leads/hooks/useLeads';
 import { LeadStatus, LeadSource, LeadPriority, ILead } from '@/modules/leads/types/leads';
 import { LeadsPipeline } from '@/components/leads/LeadsPipeline';
 import { BulkImportModal } from '@/components/leads/BulkImportModal';
+import { NewLeadForm } from '@/components/leads/NewLeadForm';
+import { exportLeadsToCSV, exportFilteredLeads } from '@/modules/leads/utils/csvExporter';
 
 // Componente principal envuelto en el provider
 export default function LeadsPage() {
@@ -532,11 +534,134 @@ function LeadsPagination() {
   );
 }
 
+// Componente de tabla filtrada por estado
+interface FilteredLeadsTableProps {
+  leads: ExtendedLead[];
+  title: string;
+  emptyMessage?: string;
+}
+
+function FilteredLeadsTable({ leads, title, emptyMessage = "No hay leads para mostrar" }: FilteredLeadsTableProps) {
+  if (leads.length === 0) {
+    return (
+      <Card>
+        <CardContent className="p-8 text-center">
+          <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+          <h3 className="text-lg font-medium text-muted-foreground mb-2">{emptyMessage}</h3>
+          <p className="text-sm text-muted-foreground">
+            Los leads aparecerán aquí cuando estén disponibles.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-semibold">{title}</h2>
+        <Badge variant="outline">{leads.length} leads</Badge>
+      </div>
+      
+      <Card>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nombre</TableHead>
+                <TableHead>Teléfono</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Empresa</TableHead>
+                <TableHead>Estado</TableHead>
+                <TableHead>Prioridad</TableHead>
+                <TableHead>Fuente</TableHead>
+                <TableHead>Fecha</TableHead>
+                <TableHead className="w-[100px]">Acciones</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {leads.map((lead) => (
+                <TableRow key={lead.id}>
+                  <TableCell className="font-medium">
+                    <div className="flex items-center gap-2">
+                      <div>
+                        <div className="font-medium">{lead.name || 'Sin nombre'}</div>
+                        {lead.position && (
+                          <div className="text-xs text-muted-foreground">{lead.position}</div>
+                        )}
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>{lead.phone || 'No proporcionado'}</TableCell>
+                  <TableCell>{lead.email || 'No proporcionado'}</TableCell>
+                  <TableCell>{lead.company || '-'}</TableCell>
+                  <TableCell>
+                    <Badge className={getStatusColor(lead.status)}>
+                      {lead.status?.replace('_', ' ') || 'Sin estado'}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge className={getPriorityColor(lead.priority || 'medium')}>
+                      {lead.priority || 'medium'}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="secondary">
+                      {lead.source?.replace('_', ' ') || 'other'}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {lead.created_at ? 
+                      new Date(lead.created_at._seconds * 1000).toLocaleDateString('es-ES') : 
+                      '-'
+                    }
+                  </TableCell>
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem>
+                          <Eye className="mr-2 h-4 w-4" />
+                          Ver detalles
+                        </DropdownMenuItem>
+                        <DropdownMenuItem>
+                          <Edit className="mr-2 h-4 w-4" />
+                          Editar
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem>
+                          <Phone className="mr-2 h-4 w-4" />
+                          Llamar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem>
+                          <Mail className="mr-2 h-4 w-4" />
+                          Email
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 // Componente principal de administración
 function LeadsAdministration() {
-  const { error, refetch } = useLeads();
+  const { error, refetch, leads, filteredLeads, stats } = useLeads();
   const { totalAlerts, hasAlerts } = useLeadsAlerts();
   const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
+  const [isNewLeadOpen, setIsNewLeadOpen] = useState(false);
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -556,11 +681,26 @@ function LeadsAdministration() {
           )}
           <Button 
             variant="outline" 
+            onClick={() => exportLeadsToCSV(filteredLeads, 'leads_export')}
+            className="flex items-center gap-2"
+          >
+            <Download className="h-4 w-4" />
+            Exportar CSV
+          </Button>
+          <Button 
+            variant="outline" 
             onClick={() => setIsBulkImportOpen(true)}
             className="flex items-center gap-2"
           >
             <Database className="h-4 w-4" />
             Importar CSV
+          </Button>
+          <Button 
+            onClick={() => setIsNewLeadOpen(true)}
+            className="flex items-center gap-2"
+          >
+            <Plus className="h-4 w-4" />
+            Nuevo Lead
           </Button>
           <Button variant="outline" onClick={refetch}>
             <RefreshCw className="h-4 w-4 mr-2" />
@@ -592,11 +732,14 @@ function LeadsAdministration() {
             <Target className="h-4 w-4" />
             Pipeline
           </TabsTrigger>
-          <TabsTrigger value="all">Todos los Leads</TabsTrigger>
-          <TabsTrigger value="active">Activos</TabsTrigger>
-          <TabsTrigger value="qualified">Calificados</TabsTrigger>
-          <TabsTrigger value="followup">Seguimiento</TabsTrigger>
-          <TabsTrigger value="converted">Convertidos</TabsTrigger>
+          <TabsTrigger value="all">Todos ({stats?.total || 0})</TabsTrigger>
+          <TabsTrigger value="new">Nuevos ({stats?.byStatus.new || 0})</TabsTrigger>
+          <TabsTrigger value="interested">Potenciales ({stats?.byStatus.interested || 0})</TabsTrigger>
+          <TabsTrigger value="qualified">Calificados ({stats?.byStatus.qualified || 0})</TabsTrigger>
+          <TabsTrigger value="followup">Seguimiento ({stats?.byStatus.follow_up || 0})</TabsTrigger>
+          <TabsTrigger value="proposals">Cotizaciones ({(stats?.byStatus.proposal_current || 0) + (stats?.byStatus.proposal_previous || 0)})</TabsTrigger>
+          <TabsTrigger value="won">Ganados ({stats?.byStatus.won || 0})</TabsTrigger>
+          <TabsTrigger value="cold">Descartados ({stats?.byStatus.cold || 0})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="pipeline" className="space-y-4">
@@ -604,48 +747,67 @@ function LeadsAdministration() {
         </TabsContent>
 
         <TabsContent value="all" className="space-y-4">
-          <LeadsTable />
-          <LeadsPagination />
+          <FilteredLeadsTable leads={filteredLeads} title="Todos los Leads" />
         </TabsContent>
 
-        <TabsContent value="active">
-          <Alert>
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              Vista de leads activos - En desarrollo
-            </AlertDescription>
-          </Alert>
+        <TabsContent value="new" className="space-y-4">
+          <FilteredLeadsTable 
+            leads={filteredLeads.filter(l => l.status === 'new')} 
+            title="Nuevos Leads" 
+            emptyMessage="No hay leads nuevos"
+          />
         </TabsContent>
 
-        <TabsContent value="qualified">
-          <Alert>
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              Vista de leads calificados - En desarrollo
-            </AlertDescription>
-          </Alert>
+        <TabsContent value="interested" className="space-y-4">
+          <FilteredLeadsTable 
+            leads={filteredLeads.filter(l => l.status === 'interested')} 
+            title="Leads Potenciales" 
+            emptyMessage="No hay leads potenciales"
+          />
         </TabsContent>
 
-        <TabsContent value="followup">
-          <Alert>
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              Vista de leads para seguimiento - En desarrollo
-            </AlertDescription>
-          </Alert>
+        <TabsContent value="qualified" className="space-y-4">
+          <FilteredLeadsTable 
+            leads={filteredLeads.filter(l => l.status === 'qualified')} 
+            title="Leads Calificados" 
+            emptyMessage="No hay leads calificados"
+          />
         </TabsContent>
 
-        <TabsContent value="converted">
-          <Alert>
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              Vista de leads convertidos - En desarrollo
-            </AlertDescription>
-          </Alert>
+        <TabsContent value="followup" className="space-y-4">
+          <FilteredLeadsTable 
+            leads={filteredLeads.filter(l => l.status === 'follow_up')} 
+            title="Leads en Seguimiento" 
+            emptyMessage="No hay leads en seguimiento"
+          />
+        </TabsContent>
+
+        <TabsContent value="proposals" className="space-y-4">
+          <FilteredLeadsTable 
+            leads={filteredLeads.filter(l => l.status === 'proposal_current' || l.status === 'proposal_previous')} 
+            title="Cotizaciones" 
+            emptyMessage="No hay cotizaciones pendientes"
+          />
+        </TabsContent>
+
+        <TabsContent value="won" className="space-y-4">
+          <FilteredLeadsTable 
+            leads={filteredLeads.filter(l => l.status === 'won')} 
+            title="Leads Ganados" 
+            emptyMessage="No hay leads ganados aún"
+          />
+        </TabsContent>
+
+        <TabsContent value="cold" className="space-y-4">
+          <FilteredLeadsTable 
+            leads={filteredLeads.filter(l => l.status === 'cold')} 
+            title="Leads Descartados" 
+            emptyMessage="No hay leads descartados"
+          />
         </TabsContent>
       </Tabs>
 
-      {/* Bulk Import Modal */}
+      {/* Modals */}
       <BulkImportModal
         isOpen={isBulkImportOpen}
         onClose={() => setIsBulkImportOpen(false)}
@@ -653,6 +815,11 @@ function LeadsAdministration() {
           setIsBulkImportOpen(false);
           refetch();
         }}
+      />
+      
+      <NewLeadForm
+        isOpen={isNewLeadOpen}
+        onClose={() => setIsNewLeadOpen(false)}
       />
     </div>
   );

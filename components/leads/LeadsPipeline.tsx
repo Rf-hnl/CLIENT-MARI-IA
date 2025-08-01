@@ -48,15 +48,17 @@ import {
   Eye,
   Edit,
   Trash2,
-  UserPlus
+  UserPlus,
+  UserX
 } from 'lucide-react';
 
 // Imports del sistema de leads
 import { ExtendedLead } from '@/modules/leads/context/LeadsContext';
 import { useLeads } from '@/modules/leads/hooks/useLeads';
 import { LeadStatus, LeadPriority } from '@/modules/leads/types/leads';
+import { getLeadDataStatus } from '@/modules/leads/utils/leadDataValidator';
 
-// Configuración de las columnas del pipeline
+// Configuración de las columnas del pipeline basada en los estados reales del CSV
 const PIPELINE_COLUMNS: Array<{
   id: LeadStatus;
   title: string;
@@ -67,78 +69,108 @@ const PIPELINE_COLUMNS: Array<{
 }> = [
   {
     id: 'new',
-    title: 'Nuevos',
-    description: 'Leads sin contactar',
+    title: 'Nuevos Leads',
+    description: 'Pendientes de contacto inicial',
     color: 'text-blue-700',
     bgColor: 'bg-blue-50 border-blue-200',
     icon: UserPlus,
   },
   {
-    id: 'contacted',
-    title: 'Contactados',
-    description: 'Primer contacto realizado',
-    color: 'text-yellow-700',
-    bgColor: 'bg-yellow-50 border-yellow-200',
-    icon: Phone,
-  },
-  {
     id: 'interested',
-    title: 'Interesados',
-    description: 'Muestran interés',
+    title: 'Leads Potenciales',
+    description: 'Prioritarios para seguimiento',
     color: 'text-green-700',
     bgColor: 'bg-green-50 border-green-200',
     icon: Star,
   },
   {
     id: 'qualified',
-    title: 'Calificados',
-    description: 'Cumple criterios',
+    title: 'Calificado',
+    description: 'En seguimiento activo',
     color: 'text-purple-700',
     bgColor: 'bg-purple-50 border-purple-200',
     icon: CheckCircle,
   },
   {
-    id: 'proposal',
-    title: 'Propuesta',
-    description: 'Propuesta enviada',
+    id: 'follow_up',
+    title: 'En Seguimiento',
+    description: 'Sin respuesta del cliente',
+    color: 'text-amber-700',
+    bgColor: 'bg-amber-50 border-amber-200',
+    icon: Clock,
+  },
+  {
+    id: 'proposal_current',
+    title: 'Cotizaciones Actuales',
+    description: 'Campaña Jun - Jul',
     color: 'text-orange-700',
     bgColor: 'bg-orange-50 border-orange-200',
     icon: Mail,
   },
   {
+    id: 'proposal_previous',
+    title: 'Cotizaciones Anteriores',
+    description: 'Campañas previas',
+    color: 'text-orange-600',
+    bgColor: 'bg-orange-100 border-orange-300',
+    icon: MessageSquare,
+  },
+  {
     id: 'negotiation',
     title: 'Negociación',
-    description: 'En proceso de cierre',
+    description: 'En proceso de ajustes',
     color: 'text-indigo-700',
     bgColor: 'bg-indigo-50 border-indigo-200',
     icon: TrendingUp,
   },
   {
+    id: 'nurturing',
+    title: 'A Futuro',
+    description: 'En pausa temporal',
+    color: 'text-cyan-700',
+    bgColor: 'bg-cyan-50 border-cyan-200',
+    icon: Calendar,
+  },
+  {
     id: 'won',
-    title: 'Ganados',
-    description: 'Convertidos a clientes',
+    title: 'Ganado',
+    description: 'Cerrado exitosamente',
     color: 'text-green-700',
     bgColor: 'bg-green-50 border-green-200',
     icon: Target,
   },
   {
     id: 'lost',
-    title: 'Perdidos',
+    title: 'Propuesta Declinada',
     description: 'No convertidos',
     color: 'text-red-700',
     bgColor: 'bg-red-50 border-red-200',
     icon: XCircle,
   },
+  {
+    id: 'cold',
+    title: 'Descartados',
+    description: 'No calificados',
+    color: 'text-gray-700',
+    bgColor: 'bg-gray-50 border-gray-200',
+    icon: UserX,
+  },
 ];
 
 // Función helper para obtener las iniciales del nombre
 const getInitials = (name: string): string => {
+  if (!name || typeof name !== 'string') {
+    return 'LD'; // Default for Lead
+  }
+  
   return name
+    .trim()
     .split(' ')
+    .filter(n => n.length > 0) // Remove empty strings
     .map(n => n[0])
     .join('')
     .toUpperCase()
-    .slice(0, 2);
+    .slice(0, 2) || 'LD';
 };
 
 // Función helper para obtener el color de la prioridad
@@ -180,9 +212,19 @@ interface LeadCardProps {
 
 function LeadCard({ lead, onStatusChange, onEdit, onDelete, onViewDetails }: LeadCardProps) {
   const [isDragging, setIsDragging] = useState(false);
+  
+  // Defensive checks for lead properties
+  if (!lead || !lead.id) {
+    console.warn('LeadCard: Invalid lead data', lead);
+    return null;
+  }
+  
   const daysAgo = getDaysAgo(lead.created_at);
   const isStale = daysAgo > 7; // Lead viejo si tiene más de 7 días
   const isUrgent = lead.priority === 'urgent' || lead.priority === 'high';
+  
+  // Obtener estado de completitud de datos
+  const dataStatus = getLeadDataStatus(lead);
 
   const handleDragStart = (e: React.DragEvent) => {
     setIsDragging(true);
@@ -218,9 +260,21 @@ function LeadCard({ lead, onStatusChange, onEdit, onDelete, onViewDetails }: Lea
               </AvatarFallback>
             </Avatar>
             <div className="min-w-0 flex-1">
-              <h4 className="font-medium text-sm truncate">{lead.name}</h4>
+              <div className="flex items-center gap-1">
+                <h4 className="font-medium text-sm truncate">{lead.name || 'Sin nombre'}</h4>
+                {dataStatus.status !== 'complete' && (
+                  <span className="text-xs" title={`${dataStatus.missingCount} datos faltantes`}>
+                    {dataStatus.statusIcon}
+                  </span>
+                )}
+              </div>
               {lead.position && (
                 <p className="text-xs text-muted-foreground truncate">{lead.position}</p>
+              )}
+              {dataStatus.status !== 'complete' && (
+                <p className="text-xs text-muted-foreground">
+                  {dataStatus.completeness}% completo
+                </p>
               )}
             </div>
           </div>
@@ -242,6 +296,12 @@ function LeadCard({ lead, onStatusChange, onEdit, onDelete, onViewDetails }: Lea
                 <Edit className="mr-2 h-4 w-4" />
                 Editar
               </DropdownMenuItem>
+              {dataStatus.status !== 'complete' && (
+                <DropdownMenuItem onClick={() => onViewDetails(lead)}>
+                  <AlertCircle className="mr-2 h-4 w-4" />
+                  Completar Datos ({dataStatus.missingCount})
+                </DropdownMenuItem>
+              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem>
                 <Phone className="mr-2 h-4 w-4" />
@@ -283,7 +343,7 @@ function LeadCard({ lead, onStatusChange, onEdit, onDelete, onViewDetails }: Lea
         <div className="space-y-1">
           <div className="flex items-center text-xs">
             <Phone className="h-3 w-3 mr-1 flex-shrink-0" />
-            <span className="truncate">{lead.phone}</span>
+            <span className="truncate">{lead.phone || 'Sin teléfono'}</span>
           </div>
           {lead.email && (
             <div className="flex items-center text-xs text-muted-foreground">
@@ -297,20 +357,20 @@ function LeadCard({ lead, onStatusChange, onEdit, onDelete, onViewDetails }: Lea
         <div className="flex items-center justify-between gap-2">
           <Badge 
             variant="outline" 
-            className={`text-xs ${getPriorityColor(lead.priority)}`}
+            className={`text-xs ${getPriorityColor(lead.priority || 'medium')}`}
           >
-            {lead.priority}
+            {lead.priority || 'medium'}
           </Badge>
           <Badge variant="secondary" className="text-xs">
-            {lead.source}
+            {lead.source || 'other'}
           </Badge>
         </div>
 
         {/* Qualification score if available */}
-        {lead.qualification_score > 0 && (
+        {(lead.qualification_score || 0) > 0 && (
           <div className="flex items-center text-xs">
             <Star className="h-3 w-3 mr-1 text-yellow-500" />
-            <span>Score: {lead.qualification_score}/100</span>
+            <span>Score: {lead.qualification_score || 0}/100</span>
           </div>
         )}
 
@@ -504,9 +564,9 @@ export function LeadsPipeline() {
   // Agrupar leads por status
   const leadsByStatus = React.useMemo(() => {
     const grouped: Record<LeadStatus, ExtendedLead[]> = {
-      new: [], contacted: [], interested: [], qualified: [],
-      proposal: [], negotiation: [], won: [], lost: [],
-      nurturing: [], follow_up: [], cold: []
+      new: [], interested: [], qualified: [], follow_up: [],
+      proposal_current: [], proposal_previous: [], negotiation: [], 
+      nurturing: [], won: [], lost: [], cold: []
     };
 
     console.log('📊 Pipeline - Total leads:', leads.length);
@@ -514,12 +574,23 @@ export function LeadsPipeline() {
     
     leads.forEach(lead => {
       console.log(`📋 Lead: ${lead.name} - Status: "${lead.status}" - Type: ${typeof lead.status}`);
-      if (grouped[lead.status]) {
-        grouped[lead.status].push(lead);
-        console.log(`✅ Lead ${lead.name} agregado a columna ${lead.status}`);
+      
+      // Mapear "contacted" a "interested" si es necesario
+      let actualStatus = lead.status;
+      if (lead.status === 'contacted') {
+        actualStatus = 'interested';
+        console.log(`🔄 Mapeando "contacted" → "interested" para ${lead.name}`);
+      }
+      
+      if (grouped[actualStatus]) {
+        grouped[actualStatus].push(lead);
+        console.log(`✅ Lead ${lead.name} agregado a columna ${actualStatus}`);
       } else {
         console.warn(`⚠️ Status "${lead.status}" no existe en grouped para lead ${lead.name}`);
         console.log('🔍 Estados disponibles:', Object.keys(grouped));
+        // Agregar a "new" como fallback
+        grouped['new'].push(lead);
+        console.log(`🔄 Lead ${lead.name} agregado a columna "new" como fallback`);
       }
     });
 
@@ -621,14 +692,15 @@ export function LeadsPipeline() {
             <DialogTitle>Detalles del Lead</DialogTitle>
           </DialogHeader>
           {selectedLead && (
-            <div className="space-y-4">
+            <div className="space-y-6">
+              {/* Header del lead */}
               <div className="flex items-center space-x-4">
                 <Avatar className="h-12 w-12">
                   <AvatarFallback>
                     {getInitials(selectedLead.name)}
                   </AvatarFallback>
                 </Avatar>
-                <div>
+                <div className="flex-1">
                   <h3 className="font-semibold text-lg">{selectedLead.name}</h3>
                   {selectedLead.position && (
                     <p className="text-muted-foreground">{selectedLead.position}</p>
@@ -637,7 +709,88 @@ export function LeadsPipeline() {
                     <p className="text-sm text-muted-foreground">{selectedLead.company}</p>
                   )}
                 </div>
+                {(() => {
+                  const detailDataStatus = getLeadDataStatus(selectedLead);
+                  return detailDataStatus.status !== 'complete' && (
+                    <div className={`px-3 py-1 rounded-lg ${detailDataStatus.statusBg}`}>
+                      <div className="flex items-center gap-2">
+                        <span>{detailDataStatus.statusIcon}</span>
+                        <div className="text-sm">
+                          <div className={`font-medium ${detailDataStatus.statusColor}`}>
+                            {detailDataStatus.completeness}% completo
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {detailDataStatus.missingCount} datos faltantes
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
+
+              {(() => {
+                const detailDataStatus = getLeadDataStatus(selectedLead);
+                const { categorized } = detailDataStatus;
+                
+                return detailDataStatus.status !== 'complete' && (
+                  <Card className="border-amber-200 bg-amber-50">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm flex items-center gap-2 text-amber-800">
+                        <AlertCircle className="h-4 w-4" />
+                        Datos Faltantes
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      {categorized.critical.length > 0 && (
+                        <div>
+                          <h5 className="text-xs font-medium text-red-700 mb-1">🚨 Críticos</h5>
+                          <div className="space-y-1">
+                            {categorized.critical.map(field => (
+                              <div key={field.field} className="text-xs text-red-600">
+                                • {field.label}: {field.description}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {categorized.important.length > 0 && (
+                        <div>
+                          <h5 className="text-xs font-medium text-orange-700 mb-1">⚠️ Importantes</h5>
+                          <div className="space-y-1">
+                            {categorized.important.map(field => (
+                              <div key={field.field} className="text-xs text-orange-600">
+                                • {field.label}: {field.description}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {categorized.optional.length > 0 && (
+                        <div>
+                          <h5 className="text-xs font-medium text-blue-700 mb-1">📝 Opcionales</h5>
+                          <div className="space-y-1">
+                            {categorized.optional.map(field => (
+                              <div key={field.field} className="text-xs text-blue-600">
+                                • {field.label}: {field.description}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      
+                      <div className="pt-2 border-t border-amber-200">
+                        <Button size="sm" className="w-full bg-amber-600 hover:bg-amber-700">
+                          <Edit className="h-3 w-3 mr-1" />
+                          Completar Datos Faltantes
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })()}
               
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -645,25 +798,23 @@ export function LeadsPipeline() {
                   <div className="space-y-2 text-sm">
                     <div className="flex items-center">
                       <Phone className="h-4 w-4 mr-2" />
-                      {selectedLead.phone}
+                      {selectedLead.phone || 'No proporcionado'}
                     </div>
-                    {selectedLead.email && (
-                      <div className="flex items-center">
-                        <Mail className="h-4 w-4 mr-2" />
-                        {selectedLead.email}
-                      </div>
-                    )}
+                    <div className="flex items-center">
+                      <Mail className="h-4 w-4 mr-2" />
+                      {selectedLead.email || 'No proporcionado'}
+                    </div>
                   </div>
                 </div>
                 
                 <div>
                   <h4 className="font-medium mb-2">Estado y Prioridad</h4>
                   <div className="space-y-2">
-                    <Badge className={getPriorityColor(selectedLead.priority)}>
-                      {selectedLead.priority}
+                    <Badge className={getPriorityColor(selectedLead.priority || 'medium')}>
+                      {selectedLead.priority || 'medium'}
                     </Badge>
                     <Badge variant="outline">
-                      {selectedLead.source}
+                      {selectedLead.source || 'other'}
                     </Badge>
                   </div>
                 </div>

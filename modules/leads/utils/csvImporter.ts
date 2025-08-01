@@ -7,15 +7,15 @@
 
 import { ILead, LeadStatus, LeadSource, LeadPriority, IFirebaseTimestamp } from '../types/leads';
 
-// Mapeo de estados del CRM externo a nuestro sistema
+// Mapeo de estados del CRM externo a nuestro sistema (exacto del CSV real)
 const STATUS_MAPPING: Record<string, LeadStatus> = {
   'Nuevos Leads / Pendientes': 'new',
   'Leads Potenciales / Prioritario': 'interested',
   'Calificado - En seguimiento': 'qualified',
   'En seguimiento / Sin respuesta': 'follow_up',
+  'Cotizaciones / Campaña Actual Jun - Jul': 'proposal_current',
+  'Cotización enviada / Campañas anteriores': 'proposal_previous',
   'Negociación / En ajustes': 'negotiation',
-  'Cotización enviada / Campañas anteriores': 'proposal',
-  'Cotizaciones / Campaña Actual Jun - Jul': 'proposal',
   'A futuro / En pausa': 'nurturing',
   'Ganado / Cerrado': 'won',
   'Propuesta declinada': 'lost',
@@ -89,9 +89,10 @@ const isCompanyName = (name: string): boolean => {
 };
 
 // Función para extraer teléfono del comercial
-const extractPhoneFromEmail = (email: string): string => {
-  // Por defecto, generar un teléfono placeholder si no hay información
-  return '+507 6000-0000'; // Placeholder para Panamá
+const extractPhoneFromEmail = (email: string): string | undefined => {
+  // Si no hay información real de teléfono, retornar undefined
+  // para que se detecte como dato faltante
+  return undefined;
 };
 
 // Función para generar un ID único
@@ -138,6 +139,8 @@ const inferLeadSource = (leadData: CSVLeadData): LeadSource => {
 export const convertCSVToLead = (csvData: CSVLeadData): Omit<ILead, 'id'> | null => {
   // Filtrar filas que no son leads válidos (headers de sección, etc.)
   if (!csvData.Oportunidad || 
+      typeof csvData.Oportunidad !== 'string' ||
+      csvData.Oportunidad.trim().length === 0 ||
       csvData.Oportunidad.includes('(') && csvData.Oportunidad.includes(')') ||
       !csvData.Probabilidad ||
       parseFloat(csvData.Probabilidad.replace(',', '.')) === 0) {
@@ -175,7 +178,7 @@ export const convertCSVToLead = (csvData: CSVLeadData): Omit<ILead, 'id'> | null
   const leadData: Omit<ILead, 'id'> = {
     // Campos requeridos
     name: name,
-    phone: phone,
+    phone: phone || 'REQUIRED', // Marcado para validación
     status: status,
     source: source,
     

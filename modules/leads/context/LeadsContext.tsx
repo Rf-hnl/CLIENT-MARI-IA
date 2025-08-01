@@ -168,8 +168,8 @@ export function LeadsProvider({ children }: { children: React.ReactNode }) {
   const calculateStats = (leadsArray: ExtendedLead[]): ILeadStats => {
     const total = leadsArray.length;
     const byStatus: Record<LeadStatus, number> = {
-      new: 0, contacted: 0, interested: 0, qualified: 0, proposal: 0,
-      negotiation: 0, won: 0, lost: 0, nurturing: 0, follow_up: 0, cold: 0
+      new: 0, interested: 0, qualified: 0, follow_up: 0, proposal_current: 0,
+      proposal_previous: 0, negotiation: 0, nurturing: 0, won: 0, lost: 0, cold: 0
     };
     const bySource: Record<LeadSource, number> = {
       website: 0, social_media: 0, referral: 0, cold_call: 0,
