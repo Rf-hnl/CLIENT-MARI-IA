@@ -16,7 +16,10 @@
         "prisma:studio": "prisma studio",
         "db:reset": "node scripts/reset-db.js",
         "db:reset-full": "tsx scripts/reset-database.ts",
-        "db:fresh": "npm run db:reset && npm run dev"
+        "db:fresh": "npm run db:reset && npm run dev",
+        "postinstall": "prisma generate",
+        "build:vercel": "next build",
+        "type-check": "tsc --noEmit"
     },
     "prisma": {
         "seed": "tsx prisma/seed.ts"
@@ -84,6 +87,7 @@
         "@types/react-dom": "^19",
         "@types/xml2js": "^0.4.14",
         "depcheck": "^1.4.7",
+        "autoprefixer": "^10.4.14",
         "eslint": "^9",
         "eslint-config-next": "15.4.4",
         "jest": "^30.0.5",
