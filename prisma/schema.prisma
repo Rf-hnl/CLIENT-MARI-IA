@@ -1,0 +1,581 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id                    String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email                 String               @unique
+  name                  String?
+  profilePicture        String?              @map("profile_picture")
+  hashedPassword        String               @map("hashed_password")
+  emailVerified         Boolean              @default(false) @map("email_verified")
+  verificationToken     String?              @map("verification_token")
+  resetPasswordToken    String?              @map("reset_password_token")
+  resetPasswordExpiry   DateTime?            @map("reset_password_expiry")
+  metadata              Json                 @default("{}")
+  createdAt             DateTime             @default(now()) @map("created_at")
+  updatedAt             DateTime             @updatedAt @map("updated_at")
+  bulkCallQueuesCreated BulkCallQueue[]      @relation("BulkCallQueueCreatedBy")
+  invitationsSent       Invitation[]         @relation("InvitedBy")
+  calendarEvents        LeadCalendarEvent[]
+  membersAdded          OrganizationMember[] @relation("MemberAddedBy")
+  memberships           OrganizationMember[]
+  ownedOrganizations    Organization[]       @relation("OrganizationOwner")
+  ownedTenants          Tenant[]             @relation("UserTenants")
+
+  @@map("users")
+}
+
+model Tenant {
+  id             String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name           String
+  slug           String          @unique
+  description    String?
+  logo           String?
+  website        String?
+  contactEmail   String?         @map("contact_email")
+  contactPhone   String?         @map("contact_phone")
+  address        String?
+  city           String?
+  country        String?
+  timezone       String          @default("UTC")
+  currency       String          @default("USD")
+  plan           String          @default("free")
+  planLimits     Json            @default("{}") @map("plan_limits")
+  features       String[]        @default([])
+  isActive       Boolean         @default(true) @map("is_active")
+  ownerId        String          @map("owner_id") @db.Uuid
+  metadata       Json            @default("{}")
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
+  apiKeys        ApiKey[]
+  bulkCallQueues BulkCallQueue[]
+  campaigns      Campaign[]
+  callLogs       LeadCallLog[]
+  leads          Lead[]
+  organizations  Organization[]
+  products       Product[]
+  owner          User            @relation("UserTenants", fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@map("tenants")
+}
+
+model Organization {
+  id             String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId       String               @map("tenant_id") @db.Uuid
+  name           String
+  description    String?
+  tagline        String?
+  industry       String?
+  website        String?
+  email          String?
+  phone          String?
+  address        String?
+  city           String?
+  country        String?
+  timezone       String?
+  logo           String?
+  services       String[]             @default([])
+  companyValues  String?              @map("company_values")
+  salesPitch     String?              @map("sales_pitch")
+  targetAudience String?              @map("target_audience")
+  ownerId        String               @map("owner_id") @db.Uuid
+  metadata       Json                 @default("{}")
+  createdAt      DateTime             @default(now()) @map("created_at")
+  updatedAt      DateTime             @updatedAt @map("updated_at")
+  apiKeys        ApiKey[]
+  bulkCallQueues BulkCallQueue[]
+  campaigns      Campaign[]
+  invitations    Invitation[]
+  callLogs       LeadCallLog[]
+  leads          Lead[]
+  members        OrganizationMember[]
+  owner          User                 @relation("OrganizationOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  tenant         Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  products       Product[]
+
+  @@map("organizations")
+}
+
+model Client {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String
+  email     String?
+  phone     String?
+  company   String?
+  address   String?
+  city      String?
+  country   String?
+  province  String?
+  notes     String?
+  status    String   @default("active")
+  metadata  Json     @default("{}")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  leads     Lead[]
+
+  @@index([email])
+  @@index([phone])
+  @@index([company])
+  @@index([status])
+  @@map("clients")
+}
+
+model Lead {
+  id                       String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId                 String                 @map("tenant_id") @db.Uuid
+  organizationId           String                 @map("organization_id") @db.Uuid
+  name                     String
+  email                    String?
+  phone                    String
+  company                  String?
+  source                   String?
+  status                   String                 @default("new")
+  priority                 String                 @default("medium")
+  description              String?
+  address                  String?
+  city                     String?
+  country                  String?
+  province                 String?
+  position                 String?
+  budgetRange              String?
+  decisionTimeline         String?
+  bestContactTime          String?
+  preferredContactMethod   String?
+  aiScore                  Int?                   @map("ai_score")
+  aiScoreBreakdown         String?                @map("ai_score_breakdown")
+  aiScoreFactors           Json?                  @map("ai_score_factors")
+  aiScoreUpdatedAt         DateTime?              @map("ai_score_updated_at")
+  clientId                 String?                @map("client_id") @db.Uuid
+  contactAttempts          Int                    @default(0) @map("contact_attempts")
+  conversionDate           DateTime?              @map("conversion_date")
+  conversionValue          Decimal?               @map("conversion_value") @db.Decimal(10, 2)
+  convertedToClient        Boolean                @default(false) @map("converted_to_client")
+  interestLevel            Int?                   @map("interest_level")
+  isQualified              Boolean                @default(false) @map("is_qualified")
+  lastContactDate          DateTime?              @map("last_contact_date")
+  nextFollowUpDate         DateTime?              @map("next_follow_up_date")
+  qualificationScore       Int                    @default(0) @map("qualification_score")
+  qualificationNotes       String?                @map("qualification_notes")
+  responseRate             Decimal                @default(0) @map("response_rate") @db.Decimal(5, 2)
+  notes                    String?
+  internalNotes            String?                @map("internal_notes")
+  createdAt                DateTime               @default(now()) @map("created_at")
+  updatedAt                DateTime               @updatedAt @map("updated_at")
+  lastCallResult           String?                @map("last_call_result")
+  daysSinceLastCall        Int?                   @map("days_since_last_call")
+  consecutiveFailures      Int                    @default(0) @map("consecutive_failures")
+  blacklistedForCalls      Boolean                @default(false) @map("blacklisted_for_calls")
+  blacklistReason          String?                @map("blacklist_reason")
+  lastSentimentScore       Decimal?               @map("last_sentiment_score") @db.Decimal(3, 2)
+  lastEngagementScore      Int?                   @map("last_engagement_score")
+  lastQualityScore         Int?                   @map("last_quality_score")
+  aiAnalysisUpdatedAt      DateTime?              @map("ai_analysis_updated_at")
+  preferredCallTimeWindow  String?                @map("preferred_call_time_window")
+  timezone                 String?                @default("America/Panama")
+  bestCallDays             String?                @map("best_call_days")
+  optimalCallTimeStart     String?                @map("optimal_call_time_start")
+  optimalCallTimeEnd       String?                @map("optimal_call_time_end")
+  lastBulkCallQueueId      String?                @map("last_bulk_call_queue_id") @db.Uuid
+  bulkCallEligibilityScore Int                    @default(50) @map("bulk_call_eligibility_score")
+  autoProgressionEnabled   Boolean                @default(true) @map("auto_progression_enabled")
+  lastProgressionDate      DateTime?              @map("last_progression_date")
+  campaignId               String?                @map("campaign_id") @db.Uuid
+  bulkCallQueueItems       BulkCallQueueItem[]
+  conversationAnalysis     ConversationAnalysis[]
+  calendarEvents           LeadCalendarEvent[]
+  callLogs                 LeadCallLog[]
+  campaign                 Campaign?              @relation(fields: [campaignId], references: [id])
+  client                   Client?                @relation(fields: [clientId], references: [id])
+  organization             Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  tenant                   Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([organizationId])
+  @@index([email])
+  @@index([phone])
+  @@index([status])
+  @@index([source])
+  @@index([priority])
+  @@index([qualificationScore])
+  @@index([isQualified])
+  @@index([convertedToClient])
+  @@index([createdAt])
+  @@index([lastCallResult])
+  @@index([daysSinceLastCall])
+  @@index([consecutiveFailures])
+  @@index([blacklistedForCalls])
+  @@index([lastSentimentScore])
+  @@index([lastEngagementScore])
+  @@index([bulkCallEligibilityScore])
+  @@index([autoProgressionEnabled])
+  @@index([status, priority, bulkCallEligibilityScore])
+  @@index([source, lastCallResult])
+  @@index([qualificationScore, lastEngagementScore])
+  @@index([campaignId])
+  @@map("leads")
+}
+
+model LeadCallLog {
+  id                      String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  leadId                  String                 @map("lead_id") @db.Uuid
+  tenantId                String                 @map("tenant_id") @db.Uuid
+  organizationId          String                 @map("organization_id") @db.Uuid
+  elevenLabsBatchId       String?                @map("elevenlabs_batch_id")
+  elevenLabsJobId         String?                @map("elevenlabs_job_id")
+  conversationId          String?                @map("conversation_id")
+  agentId                 String                 @map("agent_id")
+  agentName               String?                @map("agent_name")
+  agentSource             AgentSource            @default(ENV) @map("agent_source")
+  callType                String                 @default("prospecting") @map("call_type")
+  status                  String                 @default("initiating")
+  outcome                 String?
+  durationMinutes         Float?                 @map("duration_minutes")
+  cost                    Decimal?               @db.Decimal(10, 4)
+  costCurrency            String?                @default("USD") @map("cost_currency") @db.VarChar(3)
+  audioUrl                String?                @map("audio_url")
+  transcription           String?
+  transcriptionConfidence Float?                 @map("transcription_confidence")
+  transcriptionStatus     String?                @default("pending") @map("transcription_status")
+  notes                   String?
+  nextAction              String?                @map("next_action")
+  startTime               DateTime?              @map("start_time")
+  endTime                 DateTime?              @map("end_time")
+  createdAt               DateTime               @default(now()) @map("created_at")
+  updatedAt               DateTime               @updatedAt @map("updated_at")
+  bulkCallQueueItems      BulkCallQueueItem[]
+  conversationAnalysis    ConversationAnalysis[]
+  lead                    Lead                   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  organization            Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  tenant                  Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([leadId])
+  @@index([tenantId])
+  @@index([organizationId])
+  @@index([elevenLabsBatchId])
+  @@index([conversationId])
+  @@index([agentId])
+  @@index([agentSource])
+  @@index([status])
+  @@index([callType])
+  @@index([createdAt])
+  @@map("lead_call_logs")
+}
+
+model LeadCalendarEvent {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  leadId           String    @map("lead_id") @db.Uuid
+  userId           String    @map("user_id") @db.Uuid
+  title            String
+  description      String?
+  startTime        DateTime  @map("start_time")
+  endTime          DateTime  @map("end_time")
+  allDay           Boolean   @default(false) @map("all_day")
+  location         String?
+  eventType        String    @default("meeting") @map("event_type")
+  reminderMinutes  Int?      @map("reminder_minutes")
+  status           String    @default("scheduled")
+  metadata         Json      @default("{}")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+  attendeeEmails   String[]  @default([]) @map("attendee_emails")
+  autoReminderSent Boolean   @default(false) @map("auto_reminder_sent")
+  automated        Boolean   @default(false)
+  canceledAt       DateTime? @map("canceled_at")
+  completedAt      DateTime? @map("completed_at")
+  followUpType     String?   @map("follow_up_type")
+  meetingLink      String?   @map("meeting_link")
+  meetingPlatform  String    @default("internal") @map("meeting_platform")
+  nextAction       String?   @map("next_action")
+  outcomeNotes     String?   @map("outcome_notes")
+  priority         String    @default("medium")
+  rescheduledCount Int       @default(0) @map("rescheduled_count")
+  sentimentTrigger Decimal?  @map("sentiment_trigger") @db.Decimal(3, 2)
+  lead             Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([leadId])
+  @@index([userId])
+  @@index([startTime])
+  @@index([status])
+  @@index([priority])
+  @@index([automated])
+  @@index([followUpType])
+  @@index([meetingPlatform])
+  @@index([startTime, endTime])
+  @@index([status, priority])
+  @@map("lead_calendar_events")
+}
+
+model ConversationAnalysis {
+  id                       String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  leadId                   String      @map("lead_id") @db.Uuid
+  callLogId                String      @map("call_log_id") @db.Uuid
+  conversationId           String?     @map("conversation_id")
+  analysisType             String      @default("comprehensive") @map("analysis_type")
+  sentiment                Json?
+  qualityScore             Int?        @map("quality_score")
+  engagementLevel          String?     @map("engagement_level")
+  keyTopics                String[]    @map("key_topics")
+  actionItems              String[]    @map("action_items")
+  followUpSuggestions      String[]    @map("follow_up_suggestions")
+  interestIndicators       Json?       @map("interest_indicators")
+  objections               String[]    @default([])
+  buyingSignals            String[]    @default([]) @map("buying_signals")
+  competitorMentions       String[]    @default([]) @map("competitor_mentions")
+  priceDiscussion          Json?       @map("price_discussion")
+  decisionMakers           String[]    @default([]) @map("decision_makers")
+  timeframeIndicators      Json?       @map("timeframe_indicators")
+  speakingTimeDistribution Json?       @map("speaking_time_distribution")
+  conversationFlow         Json?       @map("conversation_flow")
+  interruptionAnalysis     Json?       @map("interruption_analysis")
+  questionCount            Int?        @map("question_count")
+  conversionProbability    Decimal?    @map("conversion_probability") @db.Decimal(5, 4)
+  recommendedNextAction    String?     @map("recommended_next_action")
+  bestFollowUpTime         String?     @map("best_follow_up_time")
+  suggestedApproach        String?     @map("suggested_approach")
+  processingModel          String?     @map("processing_model")
+  confidence               Decimal?    @db.Decimal(5, 4)
+  processingTime           Int?        @map("processing_time")
+  rawAnalysis              Json?       @map("raw_analysis")
+  analyzedAt               DateTime    @default(now()) @map("analyzed_at")
+  createdAt                DateTime    @default(now()) @map("created_at")
+  updatedAt                DateTime    @updatedAt @map("updated_at")
+  callLog                  LeadCallLog @relation(fields: [callLogId], references: [id], onDelete: Cascade)
+  lead                     Lead        @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@unique([callLogId, analysisType])
+  @@index([leadId])
+  @@index([conversationId])
+  @@index([analysisType])
+  @@index([qualityScore])
+  @@index([conversionProbability])
+  @@index([analyzedAt])
+  @@map("conversation_analysis")
+}
+
+model ApiKey {
+  id             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name           String
+  keyHash        String       @unique @map("key_hash")
+  tenantId       String       @map("tenant_id") @db.Uuid
+  organizationId String       @map("organization_id") @db.Uuid
+  permissions    String[]     @default([])
+  isActive       Boolean      @default(true) @map("is_active")
+  lastUsedAt     DateTime?    @map("last_used_at")
+  expiresAt      DateTime?    @map("expires_at")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  tenant         Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([organizationId])
+  @@index([keyHash])
+  @@index([isActive])
+  @@index([expiresAt])
+  @@map("api_keys")
+}
+
+model OrganizationMember {
+  userId         String       @db.Uuid
+  organizationId String       @db.Uuid
+  role           Role         @default(MEMBER)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  addedByUserId  String?      @db.Uuid
+  addedByUser    User?        @relation("MemberAddedBy", fields: [addedByUserId], references: [id])
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, organizationId])
+  @@index([organizationId, role])
+  @@index([userId])
+  @@map("organization_members")
+}
+
+model Invitation {
+  id              String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email           String
+  token           String           @unique
+  organizationId  String           @db.Uuid
+  role            Role             @default(MEMBER)
+  status          InvitationStatus @default(PENDING)
+  expiresAt       DateTime
+  acceptedAt      DateTime?
+  invitedByUserId String           @db.Uuid
+  invitedByUser   User             @relation("InvitedBy", fields: [invitedByUserId], references: [id])
+  organization    Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, email, status])
+  @@index([invitedByUserId])
+  @@map("invitations")
+}
+
+model BulkCallQueue {
+  id                 String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name               String
+  description        String?
+  tenantId           String              @map("tenant_id") @db.Uuid
+  organizationId     String              @map("organization_id") @db.Uuid
+  createdByUserId    String              @map("created_by_user_id") @db.Uuid
+  totalLeadsSelected Int                 @default(0) @map("total_leads_selected")
+  concurrency        Int                 @default(1)
+  delayBetweenCalls  Int                 @default(30) @map("delay_between_calls")
+  maxDailyVolume     Int?                @map("max_daily_volume")
+  timeWindowStart    String?             @map("time_window_start")
+  timeWindowEnd      String?             @map("time_window_end")
+  timezone           String              @default("America/Panama")
+  allowedDays        String?             @map("allowed_days")
+  status             BulkCallQueueStatus @default(PENDING)
+  progress           Json                @default("{}")
+  metrics            Json                @default("{}")
+  appliedFilters     Json                @default("{}") @map("applied_filters")
+  startedAt          DateTime?           @map("started_at")
+  completedAt        DateTime?           @map("completed_at")
+  pausedAt           DateTime?           @map("paused_at")
+  cancelledAt        DateTime?           @map("cancelled_at")
+  createdAt          DateTime            @default(now()) @map("created_at")
+  updatedAt          DateTime            @updatedAt @map("updated_at")
+  queueItems         BulkCallQueueItem[]
+  createdByUser      User                @relation("BulkCallQueueCreatedBy", fields: [createdByUserId], references: [id])
+  organization       Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  tenant             Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([organizationId])
+  @@index([createdByUserId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("bulk_call_queues")
+}
+
+model BulkCallQueueItem {
+  id                  String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  queueId             String             @map("queue_id") @db.Uuid
+  leadId              String             @map("lead_id") @db.Uuid
+  status              BulkCallItemStatus @default(PENDING)
+  priority            Int                @default(50)
+  personalizedScript  String?            @map("personalized_script")
+  personalizationData Json?              @map("personalization_data")
+  callLogId           String?            @map("call_log_id") @db.Uuid
+  callResult          String?            @map("call_result")
+  callDuration        Int?               @map("call_duration")
+  sentimentScore      Decimal?           @map("sentiment_score") @db.Decimal(3, 2)
+  engagementScore     Int?               @map("engagement_score")
+  qualityScore        Int?               @map("quality_score")
+  leadStateChanged    Boolean            @default(false) @map("lead_state_changed")
+  previousState       String?            @map("previous_state")
+  newState            String?            @map("new_state")
+  progressionReason   String?            @map("progression_reason")
+  scheduledAt         DateTime?          @map("scheduled_at")
+  processedAt         DateTime?          @map("processed_at")
+  completedAt         DateTime?          @map("completed_at")
+  errorMessage        String?            @map("error_message")
+  retryCount          Int                @default(0) @map("retry_count")
+  createdAt           DateTime           @default(now()) @map("created_at")
+  updatedAt           DateTime           @updatedAt @map("updated_at")
+  callLog             LeadCallLog?       @relation(fields: [callLogId], references: [id])
+  lead                Lead               @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  queue               BulkCallQueue      @relation(fields: [queueId], references: [id], onDelete: Cascade)
+
+  @@unique([queueId, leadId])
+  @@index([queueId])
+  @@index([leadId])
+  @@index([status])
+  @@index([priority])
+  @@index([scheduledAt])
+  @@index([processedAt])
+  @@map("bulk_call_queue_items")
+}
+
+model Product {
+  id             String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId       String            @map("tenant_id") @db.Uuid
+  organizationId String            @map("organization_id") @db.Uuid
+  name           String
+  description    String?
+  price          Decimal?          @db.Decimal(10, 2)
+  sku            String?           @unique
+  isActive       Boolean           @default(true) @map("is_active")
+  createdAt      DateTime          @default(now()) @map("created_at")
+  updatedAt      DateTime          @updatedAt @map("updated_at")
+  campaigns      CampaignProduct[]
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: NoAction)
+  tenant         Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("products")
+}
+
+model Campaign {
+  id             String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId       String            @map("tenant_id") @db.Uuid
+  organizationId String            @map("organization_id") @db.Uuid
+  name           String
+  description    String?
+  budget         Decimal?          @db.Decimal(12, 2)
+  startDate      DateTime?         @map("start_date")
+  endDate        DateTime?         @map("end_date")
+  status         String            @default("draft")
+  createdAt      DateTime          @default(now()) @map("created_at")
+  updatedAt      DateTime          @updatedAt @map("updated_at")
+  products       CampaignProduct[]
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: NoAction)
+  tenant         Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  leads          Lead[]
+
+  @@map("campaigns")
+}
+
+model CampaignProduct {
+  campaignId String   @map("campaign_id") @db.Uuid
+  productId  String   @map("product_id") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at")
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@id([campaignId, productId])
+  @@map("campaign_products")
+}
+
+enum AgentSource {
+  ENV
+  DB_DEPRECATED
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  EXPIRED
+}
+
+enum BulkCallQueueStatus {
+  PENDING
+  RUNNING
+  PAUSED
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum BulkCallItemStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  SKIPPED
+}

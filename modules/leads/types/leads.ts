@@ -1,0 +1,410 @@
+/**
+ * LEADS MODULE TYPES
+ * 
+ * Definiciones de tipos para el módulo de leads (prospectos)
+ * Migrado de Firebase a PostgreSQL/Supabase con Prisma
+ * Estructura: PostgreSQL tables con relaciones
+ */
+
+// Firebase types removed - using Date instead
+export type IFirebaseTimestamp = Date; // Backward compatibility alias
+
+// --- Lead States and Status ---
+// Estados basados en el CSV real del CRM
+export type LeadStatus = 
+  | "new"                    // Nuevos Leads / Pendientes (19)
+  | "interested"             // Leads Potenciales / Prioritario (45)
+  | "qualified"              // Calificado - En seguimiento (15)
+  | "follow_up"              // En seguimiento / Sin respuesta (42)
+  | "proposal_current"       // Cotizaciones / Campaña Actual Jun - Jul (17)
+  | "proposal_previous"      // Cotización enviada / Campañas anteriores (3)
+  | "negotiation"            // Negociación / En ajustes (2)
+  | "nurturing"              // A futuro / En pausa (15)
+  | "won"                    // Ganado / Cerrado (5)
+  | "lost"                   // Propuesta declinada (12)
+  | "cold"                   // Leads descartados / No calificados (99)
+
+export type LeadSource = 
+  | "website"       // Sitio web
+  | "social_media"  // Redes sociales
+  | "referral"      // Referido
+  | "cold_call"     // Llamada en frío
+  | "advertisement" // Publicidad
+  | "email"         // Email marketing
+  | "event"         // Evento/conferencia
+  | "whatsapp"      // WhatsApp
+  | "other"         // Otros
+
+export type LeadPriority = "low" | "medium" | "high" | "urgent";
+
+export type LeadInterestLevel = 1 | 2 | 3 | 4 | 5; // 1 = muy bajo, 5 = muy alto
+
+export type BusinessType = 
+  | "restaurant"        // Restaurante
+  | "retail"           // Venta al por menor
+  | "healthcare"       // Salud
+  | "technology"       // Tecnología
+  | "manufacturing"    // Manufactura
+  | "services"         // Servicios profesionales
+  | "education"        // Educación
+  | "real_estate"      // Bienes raíces
+  | "finance"          // Finanzas
+  | "automotive"       // Automotriz
+  | "construction"     // Construcción
+  | "hospitality"      // Hospitalidad/Turismo
+  | "agriculture"      // Agricultura
+  | "nonprofit"        // Sin fines de lucro
+  | "government"       // Gobierno
+  | "entertainment"    // Entretenimiento
+  | "logistics"        // Logística/Transporte
+  | "energy"           // Energía
+  | "telecommunications" // Telecomunicaciones
+  | "other"            // Otros
+
+// Mapeo de tipos de negocio a etiquetas legibles
+export const BUSINESS_TYPE_LABELS: Record<BusinessType, string> = {
+  restaurant: "Restaurante",
+  retail: "Venta al por menor",
+  healthcare: "Salud",
+  technology: "Tecnología", 
+  manufacturing: "Manufactura",
+  services: "Servicios profesionales",
+  education: "Educación",
+  real_estate: "Bienes raíces",
+  finance: "Finanzas",
+  automotive: "Automotriz",
+  construction: "Construcción",
+  hospitality: "Hospitalidad/Turismo",
+  agriculture: "Agricultura",
+  nonprofit: "Sin fines de lucro",
+  government: "Gobierno",
+  entertainment: "Entretenimiento",
+  logistics: "Logística/Transporte",
+  energy: "Energía",
+  telecommunications: "Telecomunicaciones",
+  other: "Otros"
+};
+
+// Función helper para obtener etiqueta legible
+export const getBusinessTypeLabel = (type: BusinessType | string): string => {
+  return BUSINESS_TYPE_LABELS[type as BusinessType] || type || 'No especificado';
+};
+
+// --- Lead Data Classification ---
+export type FieldRequirement = "required" | "optional" | "recommended";
+
+export interface ILeadFieldConfig {
+  [key: string]: {
+    requirement: FieldRequirement;
+    category: "personal" | "contact" | "business" | "qualification" | "system";
+    description: string;
+    warningMessage?: string;
+  };
+}
+
+// Configuration for lead fields
+export const LEAD_FIELD_CONFIG: ILeadFieldConfig = {
+  // REQUIRED - Critical for basic operation
+  name: { requirement: "required", category: "personal", description: "Nombre completo del prospecto" },
+  phone: { requirement: "required", category: "contact", description: "Teléfono principal" },
+  status: { requirement: "required", category: "qualification", description: "Estado del prospecto" },
+  source: { requirement: "required", category: "qualification", description: "Fuente del prospecto" },
+  
+  // RECOMMENDED - Important for qualification
+  email: { requirement: "recommended", category: "contact", description: "Correo electrónico", 
+          warningMessage: "Email importante para seguimiento automatizado" },
+  company: { requirement: "recommended", category: "business", description: "Empresa donde trabaja",
+            warningMessage: "Información de empresa ayuda en calificación" },
+  businessType: { requirement: "recommended", category: "business", description: "Tipo de negocio",
+                 warningMessage: "Tipo de negocio ayuda a personalizar el enfoque" },
+  position: { requirement: "recommended", category: "business", description: "Cargo o posición",
+             warningMessage: "Posición indica poder de decisión" },
+  interest_level: { requirement: "recommended", category: "qualification", description: "Nivel de interés",
+                   warningMessage: "Nivel de interés ayuda a priorizar seguimiento" },
+  
+  // OPTIONAL - Useful but not critical
+  national_id: { requirement: "optional", category: "personal", description: "Cédula de identidad" },
+  address: { requirement: "optional", category: "personal", description: "Dirección" },
+  city: { requirement: "optional", category: "personal", description: "Ciudad" },
+  province: { requirement: "optional", category: "personal", description: "Provincia" },
+  country: { requirement: "optional", category: "personal", description: "País" },
+  budget_range: { requirement: "optional", category: "business", description: "Rango de presupuesto" },
+  decision_timeline: { requirement: "optional", category: "business", description: "Timeline de decisión" },
+  notes: { requirement: "optional", category: "qualification", description: "Notas generales" },
+  tags: { requirement: "optional", category: "qualification", description: "Etiquetas del prospecto" }
+};
+
+// --- Main Lead Model ---
+export interface ILead {
+  id: string; // Unique system identifier
+  
+  // REQUIRED FIELDS - Critical for operation
+  name: string;
+  phone: string;
+  status: LeadStatus;
+  source: LeadSource;
+  
+  // CONTACT FIELDS - Recommended for effectiveness
+  email?: string;
+  preferred_contact_method?: "whatsapp" | "phone" | "email";
+  best_contact_time?: string;
+  
+  // PERSONAL FIELDS - Optional
+  national_id?: string;
+  address?: string;
+  city?: string;
+  province?: string;
+  country?: string;
+  
+  // BUSINESS/QUALIFICATION FIELDS
+  company?: string;
+  businessType?: BusinessType;
+  position?: string;
+  budget_range?: string; // e.g., "$1000-5000", "5000+"
+  decision_timeline?: string; // e.g., "1-3 months", "6+ months"
+  interest_level?: LeadInterestLevel;
+  priority: LeadPriority;
+  
+  // LEAD QUALIFICATION
+  qualification_score: number; // 0-100, calculated score (manual)
+  is_qualified: boolean; // Whether lead meets qualification criteria
+  qualification_notes?: string;
+  
+  // AI LEAD SCORING
+  ai_score?: number; // 0-100, AI calculated lead score
+  ai_score_updated_at?: string; // When AI score was last calculated
+  ai_score_factors?: {
+    data_completeness: number; // 0-40 points
+    source_quality: number; // 0-30 points
+    engagement_level: number; // 0-20 points
+    timing_factor: number; // 0-10 points
+  };
+  ai_score_breakdown?: string; // Human readable explanation
+  
+  // TRACKING FIELDS
+  last_contact_date?: string;
+  next_follow_up_date?: string;
+  contactAttempts: number; // Number of contact attempts
+  response_rate: number; // 0-100, percentage of responses
+  
+  // CONVERSION TRACKING
+  converted_to_client: boolean;
+  client_id?: string; // Reference to client if converted
+  conversion_date?: string;
+  conversion_value?: number; // Value of deal if converted
+  
+  // NOTES AND TAGS
+  notes?: string;
+  internal_notes?: string;
+  tags?: string[];
+  
+  // ASSIGNED AGENT
+  assigned_agent_id?: string;
+  assigned_agent_name?: string;
+  
+  // MARKETING AND TRACKING FIELDS
+  original_lead_id?: string; // Original lead ID if migrated
+  external_id?: string; // External system ID
+  campaign?: string; // Marketing campaign
+  campaignId?: string; // Campaign ID reference
+  medium?: string; // Marketing medium
+  keyword?: string; // Marketing keyword
+  landing_page?: string; // Landing page URL
+  referrer?: string; // Referrer URL
+  
+  // ADDITIONAL LEAD SCORING AND ANALYTICS
+  lead_score?: number; // Overall lead score
+  engagement_score?: number; // Engagement score
+  last_activity_date?: string; // Last activity date
+  
+  // DEMOGRAPHIC FIELDS
+  gender?: string; // Gender
+  age?: number; // Age
+  education_level?: string; // Education level
+  annual_income?: string; // Annual income
+  industry?: string; // Industry
+  company_size?: string; // Company size
+  product_interest?: string; // Product interest
+  budget?: string; // Budget
+  
+  // SYSTEM FIELDS
+  created_at: string;
+  updated_at: string;
+}
+
+// --- Lead Document Wrapper (for Firebase structure) ---
+export interface ILeadDocument {
+  _data: ILead;
+  leadInteractions?: ILeadInteractions;
+}
+
+// --- Lead Interactions Container ---
+export interface ILeadInteractions {
+  callLogs?: ILeadCallLog[];
+  emailRecords?: ILeadEmailRecord[];
+  whatsappRecords?: ILeadWhatsAppRecord[];
+  meetingRecords?: ILeadMeetingRecord[];
+  leadAIProfile?: ILeadAIProfile;
+}
+
+// --- Lead Interaction Models ---
+
+export interface ILeadCallLog {
+  id: string;
+  leadId: string;
+  timestamp: Date;
+  callType: "prospecting" | "qualification" | "follow_up" | "closing";
+  durationMinutes: number;
+  agentId: string;
+  outcome: "answered" | "no_answer" | "voicemail" | "busy" | "interested" | "not_interested" | "callback_requested";
+  notes?: string;
+  next_action?: string;
+  // ElevenLabs Integration
+  audioUrl?: string;
+  transcription?: string;
+  transcriptionConfidence?: number;
+  elevenLabsJobId?: string;
+  transcriptionStatus?: "pending" | "processing" | "completed" | "failed";
+}
+
+export interface ILeadEmailRecord {
+  id: string;
+  leadId: string;
+  timestamp: Date;
+  direction: "inbound" | "outbound";
+  agentId?: string;
+  subject: string;
+  content: string;
+  attachments?: string[];
+  emailType: "prospecting" | "follow_up" | "proposal" | "nurturing" | "other";
+  status: "sent" | "delivered" | "opened" | "clicked" | "replied" | "bounced" | "failed";
+  threadId?: string;
+  priority: "low" | "normal" | "high" | "urgent";
+}
+
+export interface ILeadWhatsAppRecord {
+  id: string;
+  leadId: string;
+  timestamp: Date;
+  messageDirection: "inbound" | "outbound";
+  agentId?: string;
+  messageContent: string;
+  attachments?: string[];
+  interactionType: "text" | "media" | "template" | "other";
+  // Bot Integration
+  isBotConversation?: boolean;
+  botTranscription?: Array<{
+    role: "lead" | "bot" | "agent";
+    content: string;
+    timestamp: Date;
+  }>;
+  botSessionId?: string;
+  botIntent?: string;
+  botConfidence?: number;
+  requiresHumanHandoff?: boolean;
+}
+
+export interface ILeadMeetingRecord {
+  id: string;
+  leadId: string;
+  scheduledDate: string;
+  actualDate?: string;
+  duration?: number; // minutes
+  meetingType: "phone" | "video" | "in_person";
+  agentId: string;
+  status: "scheduled" | "completed" | "no_show" | "rescheduled" | "cancelled";
+  outcome?: "interested" | "not_interested" | "needs_follow_up" | "ready_to_close";
+  notes?: string;
+  next_steps?: string;
+  proposal_sent?: boolean;
+}
+
+// --- AI Lead Profile Model ---
+export interface ILeadAIProfile {
+  leadId: string;
+  analysisDate: string;
+  lastUpdatedByAI: string;
+  
+  // === LEAD SCORING ===
+  leadScore: number; // 0-100, overall lead quality score
+  conversionProbability: number; // 0-100, probability of conversion
+  engagementScore: number; // 0-100, level of engagement
+  responsivenesScore: number; // 0-100, how responsive the lead is
+  
+  // === BEHAVIORAL ANALYSIS ===
+  communicationPreference: "whatsapp" | "phone" | "email" | "mixed" | "unknown";
+  bestContactTime: "morning" | "afternoon" | "evening" | "flexible" | "unknown";
+  responsePattern: "immediate" | "delayed" | "business_hours_only" | "inconsistent" | "non_responsive";
+  decisionMakingStyle: "quick" | "analytical" | "collaborative" | "cautious" | "unknown";
+  
+  // === PREDICTIONS ===
+  predictedConversionDate?: string;
+  predictedDealValue?: number;
+  churnRisk: number; // 0-100, risk of losing the lead
+  optimalContactFrequency: "daily" | "every_few_days" | "weekly" | "biweekly" | "monthly";
+  
+  // === RECOMMENDATIONS ===
+  recommendedAction: "immediate_follow_up" | "send_proposal" | "schedule_meeting" | "nurture" | "qualify_further" | "close" | "archive";
+  recommendedContactMethod: "whatsapp" | "phone" | "email" | "in_person";
+  recommendedMessageTone: "formal" | "friendly" | "urgent" | "consultative" | "relationship_building";
+  
+  // === AI INSIGHTS ===
+  aiInsights: string[]; // Key insights generated by AI
+  keyInterests: string[]; // Detected interests and pain points
+  objections: string[]; // Potential objections identified
+  buyingSignals: string[]; // Positive buying signals detected
+  
+  // === COMPETITIVE ANALYSIS ===
+  competitorMentions?: string[]; // Competitors mentioned by lead
+  competitiveAdvantages?: string[]; // Our advantages over competition
+  
+  // === TIMING ANALYSIS ===
+  urgencyLevel: "low" | "medium" | "high" | "critical";
+  seasonalPattern?: "consistent" | "quarter_end" | "year_end" | "seasonal";
+  nextOptimalContactDate: string;
+  
+  // === METADATA ===
+  aiModel: string; // AI model used for analysis
+  confidenceScore: number; // 0-100, confidence in analysis
+  dataQuality: "high" | "medium" | "low";
+  lastInteractionAnalyzed: string;
+}
+
+// --- Lead Statistics and Analytics ---
+export interface ILeadStats {
+  total: number;
+  byStatus: Record<LeadStatus, number>;
+  bySource: Record<LeadSource, number>;
+  byPriority: Record<LeadPriority, number>;
+  conversionRate: number; // percentage
+  averageTimeToConversion: number; // days
+  totalConversionValue: number;
+}
+
+// --- Lead Filters and Search ---
+export interface ILeadFilters {
+  status?: LeadStatus[];
+  source?: LeadSource[];
+  priority?: LeadPriority[];
+  assignedAgent?: string[];
+  interestLevel?: LeadInterestLevel[];
+  isQualified?: boolean;
+  convertedToClient?: boolean;
+  dateRange?: {
+    start: Date;
+    end: Date;
+  };
+  qualificationScoreRange?: {
+    min: number;
+    max: number;
+  };
+}
+
+export interface ILeadSearchParams {
+  query?: string; // Search in name, email, phone, company
+  filters?: ILeadFilters;
+  sortBy?: "created_at" | "updated_at" | "last_contact_date" | "qualification_score" | "name";
+  sortOrder?: "asc" | "desc";
+  page?: number;
+  limit?: number;
+}

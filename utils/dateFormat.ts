@@ -1,0 +1,49 @@
+export function formatDate(dateString: string | undefined): string {
+  if (!dateString) return 'No disponible';
+  
+  return new Date(dateString).toLocaleDateString('es-ES', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  });
+}
+
+// Helper function to safely convert Firestore timestamps
+export function safeFormatDate(timestamp: any): string {
+  try {
+    if (!timestamp) return 'Fecha no disponible';
+    
+    // Si es un Timestamp de Firestore
+    if (timestamp && typeof timestamp.toDate === 'function') {
+      return formatDate(timestamp.toDate().toISOString());
+    }
+    
+    // Si es una fecha ya serializada (formato Firebase)
+    if (timestamp && timestamp.seconds) {
+      const date = new Date(timestamp.seconds * 1000);
+      return formatDate(date.toISOString());
+    }
+    
+    // Si es una fecha serializada con _seconds (nuestro formato personalizado)
+    if (timestamp && timestamp._seconds) {
+      const date = new Date(timestamp._seconds * 1000);
+      return formatDate(date.toISOString());
+    }
+    
+    // Si es un string de fecha
+    if (typeof timestamp === 'string') {
+      return formatDate(timestamp);
+    }
+    
+    // Si es un objeto Date
+    if (timestamp instanceof Date) {
+      return formatDate(timestamp.toISOString());
+    }
+    
+    return 'Fecha inválida';
+  } catch (error) {
+    console.error('Error formatting date:', error);
+    return 'Error en fecha';
+  }
+}
+

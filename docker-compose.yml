@@ -1,0 +1,79 @@
+version: '3.8'
+
+services:
+  client-mar-ia:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - NEXT_TELEMETRY_DISABLED=1
+      - DATABASE_URL=${DATABASE_URL}
+      - DIRECT_URL=${DIRECT_URL}
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - GOOGLE_PLACES_API_KEY=${GOOGLE_PLACES_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_ASSISTANT_ID=${OPENAI_ASSISTANT_ID}
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4o-mini}
+      - OPENAI_MAX_TOKENS=${OPENAI_MAX_TOKENS:-1000}
+      - ASSISTANT_TEMPERATURE=${ASSISTANT_TEMPERATURE:-0.7}
+      - ASSISTANT_TOP_P=${ASSISTANT_TOP_P:-1.0}
+      - ASSISTANT_PRESENCE_PENALTY=${ASSISTANT_PRESENCE_PENALTY:-0.0}
+      - ASSISTANT_FREQUENCY_PENALTY=${ASSISTANT_FREQUENCY_PENALTY:-0.0}
+      - CONNECTIONS_ENCRYPTION_KEY=${CONNECTIONS_ENCRYPTION_KEY}
+      - RESEND_API_KEY=${RESEND_API_KEY}
+      - UPLOADTHING_TOKEN=${UPLOADTHING_TOKEN}
+      - JWT_SECRET=${JWT_SECRET}
+      - COMPANY_NAME=${COMPANY_NAME:-MAR-IA}
+      - NEXT_PUBLIC_DEVELOPMENT=${NEXT_PUBLIC_DEVELOPMENT:-false}
+      - NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL:-http://localhost:3000}
+    env_file:
+      - .env.prod
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - maria-network
+
+  # Optional: Nginx reverse proxy for production
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - client-mar-ia
+    restart: unless-stopped
+    networks:
+      - maria-network
+    profiles:
+      - production
+
+  # Optional: Redis for caching (if needed)
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    networks:
+      - maria-network
+    profiles:
+      - cache
+
+networks:
+  maria-network:
+    driver: bridge
+
+volumes:
+  redis-data:

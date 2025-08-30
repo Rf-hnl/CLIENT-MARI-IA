@@ -1,0 +1,17 @@
+# This workflow has been disabled in favor of Azure Pipelines
+# See azure-pipelines.yml for the active CI/CD configuration
+
+name: DISABLED - Build and deploy container app to Azure Web App - ia-mar-ia-app
+
+on:
+  # Completely disabled - no triggers at all
+
+jobs:
+  disabled_notice:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Notice
+      run: |
+        echo "⚠️  This GitHub Actions workflow has been disabled"
+        echo "🚀 Active CI/CD is now handled by Azure Pipelines"
+        echo "📁 See azure-pipelines.yml for the current configuration"

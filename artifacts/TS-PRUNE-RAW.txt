@@ -1,0 +1,50 @@
+middleware.ts:5 - middleware
+middleware.ts:17 - config
+next.config.ts:34 - default
+app/page.tsx:3 - default
+config/modules.config.tsx:71 - ModuleGroup (used in module)
+config/modules.config.tsx:77 - MODULES (used in module)
+config/modules.config.tsx:201 - GROUP_LABELS (used in module)
+config/modules.config.tsx:219 - getGroupedModules
+config/modules.config.tsx:241 - getModuleById
+config/modules.config.tsx:246 - getModuleByPath (used in module)
+config/modules.config.tsx:263 - getSubmoduleByPath
+config/modules.config.tsx:274 - isActiveModulePath
+lib/auth-interceptor.ts:2 - addAuthHeader (used in module)
+lib/auth-interceptor.ts:15 - authFetch
+scripts/migrate-firebase-to-postgresql.ts:549 - migrateFirebaseToPostgreSQL
+scripts/reset-database.ts:109 - resetDatabase (used in module)
+types/agents.ts:94 - IAgentSelectionCriteria
+types/agents.ts:103 - IAgentSelectionResult
+types/agents.ts:141 - ICallEvent
+types/agents.ts:175 - IPromptTemplate
+types/agents.ts:186 - IWebhookConfig
+types/analysisAgents.ts:26 - BaseProviderConfig (used in module)
+types/analysisAgents.ts:36 - OpenAIConfig (used in module)
+types/analysisAgents.ts:45 - AnthropicConfig (used in module)
+types/analysisAgents.ts:53 - GroqConfig (used in module)
+types/analysisAgents.ts:186 - IAnalysisAgentRequest
+types/analysisAgents.ts:313 - SupportedProvider (used in module)
+types/automationAgents.ts:14 - AutomationPurpose (used in module)
+types/automationAgents.ts:35 - AutomationType (used in module)
+types/automationAgents.ts:50 - TriggerType (used in module)
+types/automationAgents.ts:65 - ExecutionStatus (used in module)
+types/automationAgents.ts:78 - WorkflowConfig (used in module)
+types/automationAgents.ts:126 - WorkflowStep (used in module)
+types/automationAgents.ts:166 - StepType (used in module)
+types/automationAgents.ts:184 - IntegrationConfig (used in module)
+types/automationAgents.ts:229 - AutomationUsageConfig (used in module)
+types/automationAgents.ts:277 - AutomationStats (used in module)
+types/automationAgents.ts:351 - AutomationValidation (used in module)
+types/automationAgents.ts:388 - AutomationMetadata (used in module)
+types/automationAgents.ts:440 - ITenantAutomationAgent (used in module)
+types/automationAgents.ts:477 - ICreateAutomationAgentData
+types/automationAgents.ts:492 - IUpdateAutomationAgentData
+types/automationAgents.ts:505 - IAutomationAgentsFilter
+types/automationAgents.ts:517 - IAutomationAgentResponse
+types/automationAgents.ts:554 - IAutomationAgentValidationResult
+types/automationAgents.ts:571 - ITenantAutomationAgentsStats
+types/automationAgents.ts:619 - AUTOMATION_TEMPLATES
+types/automationAgents.ts:680 - default
+types/customerAgents.ts:14 - CustomerPurpose (used in module)
+types/customerAgents.ts:32 - ServiceLevel (used in module)

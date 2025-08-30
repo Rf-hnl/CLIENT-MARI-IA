@@ -1,0 +1,29 @@
+{
+  "version": 2,
+  "buildCommand": "npm run build",
+  "outputDirectory": ".next",
+  "installCommand": "npm ci",
+  "framework": "nextjs",
+  "functions": {
+    "app/api/**/*.ts": {
+      "maxDuration": 30
+    },
+    "app/api/ai/**/*.ts": {
+      "maxDuration": 60
+    },
+    "app/api/calls/**/*.ts": {
+      "maxDuration": 45
+    }
+  },
+  "env": {
+    "SKIP_ENV_VALIDATION": "1"
+  },
+  "build": {
+    "env": {
+      "SKIP_ENV_VALIDATION": "1",
+      "NODE_ENV": "production"
+    }
+  },
+  "regions": ["iad1"],
+  "crons": []
+}

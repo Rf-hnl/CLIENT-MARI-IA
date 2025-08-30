@@ -1,0 +1,20 @@
+Unused dependencies
+* @radix-ui/react-checkbox
+* jsonwebtoken
+Unused devDependencies
+* @tailwindcss/postcss
+* @testing-library/react
+* @testing-library/user-event
+* @types/jest
+* @types/jsonwebtoken
+* depcheck
+* jest-environment-jsdom
+* tailwindcss
+* ts-node
+* ts-prune
+* tw-animate-css
+Missing dependencies
+* firebase: ./types/agents.ts
+* firebase-admin: ./scripts/create-sample-leads.js
+* chalk: ./scripts/reset-database.ts
+* @radix-ui/react-visually-hidden: ./components/ui/visually-hidden.tsx
